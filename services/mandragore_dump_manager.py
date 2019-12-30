@@ -8,8 +8,9 @@ def _classes_csv_preprocess(row) -> (list, bool):
 
 
 def _scene_in_images_csv_preprocess(row) -> (list, bool):
+    skip = row[0] == row[1]
     row[1] = row[1][1:]
-    return row, row[0] == row[1]
+    return row, skip
 
 
 class MandragoreDumpManager:
@@ -75,10 +76,10 @@ class MandragoreDumpManager:
         self.persistance = persistance
         pass
 
-    def load_basic_data(self):
+    def load_basic_data(self) -> ():
         # We suppose the DB is ready and cleaned
 
-        warnings = []
+        imported = []
         dbHelper = persistence.db.DBOperationHelper(self.persistance.conn)
         for doc, params in self.DUMP_DATA.items():
             full_docname = os.path.join(self.rootdir, doc)
@@ -86,8 +87,9 @@ class MandragoreDumpManager:
                 # need to warn the file is not processed
                 raise FileNotFoundError("Cannot import basic data as file {} is mising.".format(full_docname))
             query = persistence.db.SQLBuilder.build_insert_into_query_with_parameters(params["table"], params["fields"])
-            dbHelper.import_csv_file(full_docname, query, params["csv"], params["preprocess"])
-
+            report, warnings = dbHelper.import_csv_file(full_docname, query, params["csv"], params["preprocess"])
+            imported.append((doc, report, warnings))
+        return imported
 
 
 

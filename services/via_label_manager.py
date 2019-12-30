@@ -3,6 +3,8 @@ import json
 import os
 import model.model
 import tempfile
+import persistence.db
+import click
 
 # JSON_DATA_PATH = "/Users/francois/Documents/Mandragore/DetourageImages"
 
@@ -53,34 +55,40 @@ class ViaLabelManager:
         self.galactica = galactica
         pass
 
-    def load_all_labeled_files(self) -> []:
+    def list_labeled_files(self) -> []:
         files =[]
         for r, d, f in os.walk(self.rootdir):
             for file in f:
                 if '.json' in file:
                     files.append(os.path.join(r, file))
+        return files
 
+    def load_all_labeled_files(self) -> ([], []):
         scenes = []
-        for f in files:
-            scenes.extend(self.load_one_labeled_file(f))
+        warnings =[]
+        for f in self.list_labeled_files():
+            sc, wa = self.load_one_labeled_file(f)
+            scenes.extend(sc)
+            warnings.extend(wa)
 
-        return scenes
+        return scenes, warnings
 
-    def load_one_labeled_file(self, filepath) -> []:
+    def load_one_labeled_file(self, filepath) -> ([], []):
         # We suppose the DB is ready and cleaned
 
         with open(filepath, "r") as fp:
             data = json.load(fp)
 
         scenes = []
+        warnings =[]
         for v in data.values():
             try:
                 scene = self._describe_one_scene(v)
                 scenes.append(scene)
-            except InvalidFilenameError:
-                pass # just ignore for now - as we want others to be added
+            except InvalidFilenameError as e:
+                warnings.append("file %s - one scene cannot be prepared for import. Reason : %s" % (filepath, str(e)))
 
-        return scenes
+        return scenes, warnings
 
     @staticmethod
     def _describe_one_scene(via_data) -> dict:
@@ -101,17 +109,16 @@ class ViaLabelManager:
         mandragore_id = via_data['file_attributes']['MandragoreId']
         descriptors = []
 
+        size_image = url.size_px()
         for region in via_data['regions']:
             class_id = region['region_attributes']['Descripteur']
             size_px = region['shape_attributes']
-            size_pct = model.model.zone_in_zone_as_pct(url.size_px(), size_px)
-
-            descriptors.append({'classID':class_id, 'location':size_pct})
-
+            descriptors.append({'classID':class_id, 'location-px':size_px})
+        
         return {'mandragoreID' : mandragore_id, 'documentURL':document_url, 'imageID':image_id,
-                'size_px': url.size_px(), 'descriptors':descriptors}
+                'size_px': size_image, 'descriptors':descriptors}
 
-    def record_scenes(self, scenes):
+    def record_scenes(self, scenes, title = 'prepare scenes') -> str:
         # ensure to delete data tied to the corresponding 'mandragoreID'
         # then add
         #   - images's records
@@ -124,27 +131,47 @@ class ViaLabelManager:
         images_fields = []
         scene_fields = []
         descriptor_fields = []
-        for sc in scenes:
-            mandragore_ids.add(sc['mandragoreID'])
-            image = self.db.retrieve_image(sc['imageID'])
-            if image is None:
-                # need to retrieve the size of the image
-                w, h = self.galactica.collect_image_size(sc['documentURL'])
-                images_fields.append({'imageID': sc['imageID'], 'documentURL': sc['documentURL'], 'width': w, 'height': h})
-            else:
-                w, h = image['width'], image['height']
+        with click.progressbar(scenes, label=title) as bar:
+            for sc in bar:
+                mandragore_ids.add(sc['mandragoreID'])
+                image = self.db.retrieve_image(sc['imageID'])
+                if image is None or image['width'] is None or image['height'] is None:
+                    # need to retrieve the size of the image
+                    w, h = self.galactica.collect_image_size(sc['documentURL'])
+                    images_fields.append({'imageID': sc['imageID'], 'documentURL': sc['documentURL'], 'width': w, 'height': h})
+                else:
+                    w, h = image['width'], image['height']
 
-            scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
-            scene_info.update(model.model.zone_in_zone_as_pct({'x': 1, 'y': 1, 'width': w, 'height': h}, sc['size_px']))
-            scene_fields.append(scene_info)
+                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
+                size_image = {'x': 1, 'y': 1, 'width': w, 'height': h}
+                scene_info.update(model.model.zone_in_zone_as_pct(size_image, sc['size_px']))
+                scene_fields.append(scene_info)
 
-            for d in sc['descriptors']:
-                desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
-                desc_info.update(d['location'])
-                descriptor_fields.append(desc_info)
+                for d in sc['descriptors']:
+                    desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
+                    loc = model.model.zone_in_zone_as_pct(sc['size_px'], d['location-px'])
+                    desc_info['location'] = loc
+                    descriptor_fields.append(desc_info)
+        try:
+            self.db.delete_mandragore_related(mandragore_ids)
+            self.db.ensure_images(images_fields)
+            return "%d scenes imported in DB." % len(scenes)
+        except Exception as e:
+            return "Was not able to import the %d scenes in DB. Reason : %s" % (len(scenes), str(e))
 
-        self.db.delete_mandragore_related(mandragore_ids)
-        self.db.ensure_images(images_fields)
+    def import_labels(self) -> ():
+        report = []
+        files = self.list_labeled_files()
+        if len(files) > 0:
+            for f in files:
+                scenes, warnings = self.load_one_labeled_file(f)
+                rep = self.record_scenes(scenes, f)
+                report.append((f, warnings, rep))
+        else:
+            report.append(("--NO FILE--", [], "No .json files found in %s" % self.rootdir))
+        return report
+            
+
 
 
 

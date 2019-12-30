@@ -59,14 +59,11 @@ TEST_FILES = { 'classes.csv': """
 
 class TestViaLabelManager(unittest.TestCase):
 
-    def prepare_data(self, tmpdir: str) -> persistence.db.PersistMandlagore:
+    def prepare_data(self, tmpdir: str):
         for k, v in TEST_FILES.items():
             datafile = os.path.join(tmpdir, k)
             with open(datafile, 'w', encoding = 'UTF-8') as content_file:
                 content_file.write(v.strip())
-        db = persistence.db.PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db'))
-        db.ensure_schema(True)
-        return db
 
     def test_describe_one_scene(self):
         tests = {
@@ -84,21 +81,24 @@ class TestViaLabelManager(unittest.TestCase):
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            db = self.prepare_data(tmpdir)
-            mng = services.mandragore_dump_manager.MandragoreDumpManager(tmpdir, db)
+            self.prepare_data(tmpdir)
+            with persistence.db.PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db')) as db:
+                db.ensure_schema(True)
 
-            # now try to import the files
-            mng.load_basic_data()
+                mng = services.mandragore_dump_manager.MandragoreDumpManager(tmpdir, db)
 
-            sqls = [l for l in db.conn.iterdump()]
+                # now try to import the files
+                mng.load_basic_data()
 
-            # verify some data 
-            cur = db.conn.cursor()
-            for query, exist in tests.items():
-                cur.execute(query)
-                rows = cur.fetchall()
-                self.assertEqual(exist, len(rows) > 0, "invalid result in request : {} - value {} expect".format(query, exist))
-            
+                sqls = [l for l in db.conn.iterdump()]
+
+                # verify some data 
+                cur = db.conn.cursor()
+                for query, exist in tests.items():
+                    cur.execute(query)
+                    rows = cur.fetchall()
+                    self.assertEqual(exist, len(rows) > 0, "invalid result in request : {} - value {} expect".format(query, exist))
+                
 
         
 
