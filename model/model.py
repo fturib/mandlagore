@@ -48,9 +48,12 @@ class GalacticaURL:
         return int(self.params[7][1:])
 
     def size_px(self) -> {}:
+        image_size = self.params[8]
+        if image_size == 'full':
+            return None
         location = [int(l) for l in self.params[8].split(",")]
-        return {'x': location[0], 'y': location[1], 'width': location[2]-location[0]+1,
-                              'height': location[3]-location[1]+1}
+        return {'x': location[0], 'y': location[1], 'width': location[2],
+                              'height': location[3]}
 
     def as_filename(self) -> str:
         return "_".join((self.document_id(), str(self.page_number())))
