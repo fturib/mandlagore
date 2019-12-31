@@ -93,6 +93,10 @@ class SQLBuilder:
 
 class DBOperationHelper:
 
+    MULTI_RECORD = 'multi-records'
+    SINGLE_RECORD = 'single-record'
+
+
     def __init__(self, conn):
         self.conn = conn
 
@@ -125,7 +129,7 @@ class DBOperationHelper:
             for row in csvreader:
                 frow, skip = rowTranslater(row) if rowTranslater is not None else (row, False)
                 if not skip:
-                    data = row if fieldlist is None else [frow[x] for x in fieldlist]
+                    data = frow if fieldlist is None else [frow[x] for x in fieldlist]
                     try:
                         cur.execute(insertQuery, data)
                         lines += 1
@@ -134,6 +138,30 @@ class DBOperationHelper:
         self.conn.commit()
         return "%d lines imported" % lines, warnings
 
+    def import_csv_mode_file(self, filename, insertQuery, encoding, delim, mode, fieldlist, rowTranslater = None) -> (str, []):
+        # sql = INSERT INTO table(field, field, ...) VALUES(?,?, ...)
+        # fieldlist is an ordered set of the numbers of fields to be taken from file to the query - 0 is first index
+        #TODO manage exceptions
+
+        lines = 0
+        warnings = []
+        with open(filename, newline='', encoding=encoding) as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=delim)
+            cur = self.conn.cursor()
+            for line in csvreader:
+                rows = [[line[0], x] for x in line[1:]] if mode == DBOperationHelper.MULTI_RECORD else [line]
+                for row in rows:
+                    frow, skip = rowTranslater(row) if rowTranslater is not None else (row, False)
+                    if not skip:
+                        data = frow if fieldlist is None else [frow[x] for x in fieldlist]
+                        try:
+                            cur.execute(insertQuery, data)
+                        except Exception as e:
+                            warnings.append("%s : the line (%s) could not be imported : %s" % (filename, ",".join(data), str(e)))
+                lines += 1
+        
+        self.conn.commit()
+        return "%d lines imported" % lines, warnings
 
 
 class PersistMandlagore(object):
@@ -183,16 +211,23 @@ class PersistMandlagore(object):
         self.conn.executemany(q, d)
         q, d = TABLES['descriptors'].delete_query_one_parameter('mandragoreID', mandragore_ids)
         self.conn.executemany(q, d)
+        self.conn.commit()
 
     def ensure_images(self, images_id_url_w_h: [dict]):
         # images_id_url_w_h is a list of dict(). Each dict has the names of fields as keys
-        self.conn.executemany(*TABLES['images'].update_query_full_parameters(images_id_url_w_h))
+        q, p = TABLES['images'].update_query_full_parameters(images_id_url_w_h)
+        self.conn.executemany(q, p)
+        self.conn.commit()
 
     def add_scenes(self, scenes: [dict]):
-        self.conn.executemany(*TABLES['scenes'].update_query_full_parameters(scenes))
+        q, p = TABLES['scenes'].update_query_full_parameters(scenes)
+        self.conn.executemany(q, p)
+        self.conn.commit()
 
     def add_descriptors(self, descriptors):
-        self.conn.executemany(*TABLES['descriptors'].update_query_full_parameters(descriptors))
+        q, p = TABLES['descriptors'].update_query_full_parameters(descriptors)
+        self.conn.executemany(q, p)
+        self.conn.commit()
 
     def retrieve_image(self, imageID):
         query, data = TABLES['images'].get_query_on_keys([imageID])

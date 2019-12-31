@@ -150,11 +150,13 @@ class ViaLabelManager:
                 for d in sc['descriptors']:
                     desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
                     loc = model.model.zone_in_zone_as_pct(sc['size_px'], d['location-px'])
-                    desc_info['location'] = loc
+                    desc_info.update(loc)
                     descriptor_fields.append(desc_info)
         try:
             self.db.delete_mandragore_related(mandragore_ids)
             self.db.ensure_images(images_fields)
+            self.db.add_scenes(scene_fields)
+            self.db.add_descriptors(descriptor_fields)
             return "%d scenes imported in DB." % len(scenes)
         except Exception as e:
             return "Was not able to import the %d scenes in DB. Reason : %s" % (len(scenes), str(e))

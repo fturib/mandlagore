@@ -146,7 +146,7 @@ def mandragore(mdlgenv: MdlgEnv):
     with persistence.db.PersistMandlagore(pathdb) as db:
         dname = mdlgenv.dump_data_dirname()
         mng = services.mandragore_dump_manager.MandragoreDumpManager(dname, db)
-        report = mng.load_basic_data()
+        report = mng.load_bnf_data()
         click.echo("Mdlg Mandragore dump files loaded into the DB")
         for file, report, warnings in report:
             click.echo("%s : %s" % (file, report))

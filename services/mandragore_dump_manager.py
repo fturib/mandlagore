@@ -1,6 +1,6 @@
-
 import os
 import persistence.db
+import collections
 
 
 def _classes_csv_preprocess(row) -> (list, bool):
@@ -11,6 +11,14 @@ def _scene_in_images_csv_preprocess(row) -> (list, bool):
     skip = row[0] == row[1]
     row[1] = row[1][1:]
     return row, skip
+
+def _descriptor_image_csv_preprocess(row) -> (list, bool):
+    row[1] = row[1][1:]
+    return row, False
+
+def _descriptor_classe_csv_preprocess(row) -> (list, bool):
+    skip = len(row[1]) <= 0
+    return (row[0][1:], row[1].split(' ')[0]), skip
 
 
 class MandragoreDumpManager:
@@ -71,6 +79,31 @@ class MandragoreDumpManager:
         },
     }
 
+
+    BnfDumpData = collections.namedtuple('BnfDumpData', ['filename', 'encoding', 'table', 'fields', 'mode', 'columns', 'delimiter', 'transform'])
+    BNF_DUMP_DATA = [
+        # 53138757-80	https://gallica.bnf.fr/iiif/ark:/12148/btv1b531387571/f80/full/pct:50/0/native.jpg
+        BnfDumpData('Zoologie-URLs-Gallica.txt', 'utf-8', "images",["imageID", "documentURL"], 
+        persistence.db.DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
+
+        # 7842457-1	http://visualiseur.bnf.fr/ConsulterElementNum?O=IFN-7842457&E=JPEG&Deb=1&Fin=1&Param=E
+        BnfDumpData('Zoologie-URLs-DRE-Mandragore.txt', 'utf-8', "images",["imageID", "documentURL"], 
+        persistence.db.DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
+
+        # 10507217-143;#78047;#78048;#78049;#78050
+        BnfDumpData('Zoologie-images-notices.csv', 'latin_1', "scenes",["mandragoreID", "imageID"],
+        persistence.db.DBOperationHelper.MULTI_RECORD, [1, 0], ';',_descriptor_image_csv_preprocess),
+
+        # 100327;chien (100327);faucon (100327);oiseau (100327);perdrix (100327);
+        BnfDumpData('Zoologie-notices-descripteurs.csv',  'latin_1', "descriptors",["mandragoreID", "classID"],
+        persistence.db.DBOperationHelper.MULTI_RECORD, [0, 1],';', _descriptor_classe_csv_preprocess),
+
+        # 100327;chien (100327);faucon (100327);oiseau (100327);perdrix (100327);
+        BnfDumpData('Zoologie-notices-descripteurs.csv',  'latin_1', "classes", ["classID"], 
+        persistence.db.DBOperationHelper.MULTI_RECORD, [1], ';', _descriptor_classe_csv_preprocess),
+    ]
+
+
     def __init__(self, rootdir: str, persistance: persistence.db.PersistMandlagore):
         self.rootdir = rootdir
         self.persistance = persistance
@@ -91,6 +124,20 @@ class MandragoreDumpManager:
             imported.append((doc, report, warnings))
         return imported
 
+    def load_bnf_data(self) -> ():
+        # We suppose the DB is ready and cleaned
+
+        imported = []
+        dbHelper = persistence.db.DBOperationHelper(self.persistance.conn)
+        for filename, encoding, tablename, fields, record_mode, columns, delim, transform in self.BNF_DUMP_DATA:
+            full_docname = os.path.join(self.rootdir, filename)
+            if not (os.path.exists(full_docname) and os.path.isfile(full_docname)):
+                # need to warn the file is not processed
+                raise FileNotFoundError("Cannot import basic data as file {} is mising.".format(full_docname))
+            query = persistence.db.SQLBuilder.build_insert_into_query_with_parameters(tablename, fields)
+            report, warnings = dbHelper.import_csv_mode_file(full_docname, query, encoding, delim, record_mode, columns, transform)
+            imported.append((filename, report, warnings))
+        return imported
 
 
 
