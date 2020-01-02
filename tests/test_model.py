@@ -11,7 +11,7 @@ class TestGalacticaURL(unittest.TestCase):
         self.assertTrue(gal.is_valid(), 'url {0} expected to be true'.format(url))
         self.assertEqual("DOCUMENTID", gal.document_id())
         self.assertEqual(200, gal.page_number())
-        self.assertEqual({'x': 1, 'y': 2, 'width': 3, 'height': 3}, gal.size_px())
+        self.assertEqual({'x': 1, 'y': 2, 'width': 3, 'height': 4}, gal.size_px())
         self.assertEqual('DOCUMENTID_200', gal.as_filename())
         self.assertEqual("https://gallica.bnf.fr/iiif/ark:/12148/btv1bDOCUMENTIDd/f200/info.json", gal.url_image_properties())
 

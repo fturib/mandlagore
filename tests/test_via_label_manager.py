@@ -72,7 +72,7 @@ class TestViaLabelManager(unittest.TestCase):
         self.assertEqual("60106", f11['mandragoreID'])
         self.assertEqual("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg", f11['documentURL'])
         self.assertEqual("8470209-11", f11['imageID'])
-        self.assertDictEqual({'x':398, 'y':195, 'width':1920, 'height': 3751}, f11['size_px'])
+        self.assertDictEqual({'x':398, 'y':195, 'width':2317, 'height': 3945}, f11['size_px'])
         self.assertEqual(2, len(f11['descriptors']))
         self.assertEqual('armoiries', f11['descriptors'][0]['classID'])
         self.assertEqual('serpent', f11['descriptors'][1]['classID'])
