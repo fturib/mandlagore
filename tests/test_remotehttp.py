@@ -1,5 +1,5 @@
-import persistence.remoteHttp
-import unittest.mock
+import unittest
+from mdlg.persistence.remoteHttp import Galactica
 from unittest.mock import patch
 import json
 
@@ -23,11 +23,11 @@ class FakeReqOpener:
 
 class TestRemoteHTTP(unittest.TestCase):
 
-    @patch('persistence.remoteHttp.urllib.request.urlopen')
+    @patch('mdlg.persistence.remoteHttp.urllib.request.urlopen')
     def test_collect_image_size(self, mock_urlopen):
         mock_urlopen.return_value = FakeReqOpener()
 
-        width, height = persistence.remoteHttp.Galactica.collect_image_size("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/info.json")
+        width, height = Galactica.collect_image_size("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/info.json")
         self.assertEqual(100, width)
         self.assertEqual(200, height)
 

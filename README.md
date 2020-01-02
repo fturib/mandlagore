@@ -17,6 +17,26 @@ As of now, the following pieces are implemented, with (too few) UT.
 
 a CLI is available to trigger those commands
 
+## Installation
+
+the package has to be installed either for enhancing the development, either to use it from within another program.
+
+NOTE: I still need to test if the installation happen from github.
+
+```bash
+# create your conda environment
+conda create -n aname python=3.6
+conda activate aname
+python setup develop <root-folder-of-code>
+```
+
+### Runnint the unit tests
+
+```bash
+# cd <root-folder-of-code-mdlg>
+python -m unittest tests/test_*.py -v
+```
+
 ## CLI
 
 ### Help on the CLI

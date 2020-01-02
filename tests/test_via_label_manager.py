@@ -1,7 +1,7 @@
-import unittest.mock
+import unittest
 import json
 import tempfile
-import services.via_label_manager
+from mdlg.services.via_label_manager import ViaLabelManager
 import os
 
 
@@ -62,7 +62,7 @@ class TestViaLabelManager(unittest.TestCase):
             with open(datafile, 'w') as content_file:
                 content_file.write(json.dumps(gallica_12148_f11))
 
-            vlm = services.via_label_manager.ViaLabelManager(tmpdir, None, None)
+            vlm = ViaLabelManager(tmpdir, None, None)
             scenes, warnings = vlm.load_all_labeled_files()
 
         # assert now the content of scenes
@@ -78,13 +78,13 @@ class TestViaLabelManager(unittest.TestCase):
         self.assertEqual('serpent', f11['descriptors'][1]['classID'])
 
     def test_record_scenes(self):
-        with unittest.mock.patch('persistence.db.PersistMandlagore',  autospec=True) as MockDB:
-            with unittest.mock.patch('persistence.remoteHttp.Galactica', autospec=True) as MockGalactica:
+        with unittest.mock.patch('mdlg.persistence.db.PersistMandlagore',  autospec=True) as MockDB:
+            with unittest.mock.patch('mdlg.persistence.remoteHttp.Galactica', autospec=True) as MockGalactica:
                 with MockDB() as db:
                     db.retrieve_image.return_value = None
                     gal = MockGalactica()
                     gal.collect_image_size.return_value=(1000,2000)
-                    vlm = services.via_label_manager.ViaLabelManager(None, db, gal)
+                    vlm = ViaLabelManager(None, db, gal)
 
                     vlm.record_scenes(SCENES)
 
