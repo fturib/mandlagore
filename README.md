@@ -31,7 +31,7 @@ that root folder can be provided either as an option on the command line, or as 
 ```bash
 cd
 mkdir mdlg-data
-export MDLG-DATA ~/mdlg-data
+export MDLG-DATA=~/mdlg-data
 ```
 
 ```bash
@@ -82,15 +82,13 @@ the json files, result of this labelisation are presented on this page of the bn
 you will need to download the raw annotations in json format provided on this page:
 
 ```bash
+cd ~/tmp
+wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019.zip
+unzip Segmentation2019.zip
+cp Segmentation2019/RawVIAData/VIA* $MDLG_DATA/import/via-labels
+rm -rf Segmentation2019
+rm Segmentation2019.zip
 cd $MDLG_DATA/import/via-labels
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Arabe274_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Francais76_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Francais225_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Francais1291_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Francais2692_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_SmithLesouef68_Tags.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Grec2736_Enluminures.json
-wget ftp://ftp.bnf.fr/api/jeux_docs_num/Mandragore/Segmentation2019/RawVIAData/VIA_Latin757_Enluminures.json
 ```
 
 then run the cli to import those label files in DB:
