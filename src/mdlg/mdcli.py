@@ -1,10 +1,10 @@
 
 import click
 import os
-import persistence.db
-import persistence.remoteHttp
-import services.mandragore_dump_manager
-import services.via_label_manager
+from mdlg.persistence.db import PersistMandlagore
+from mdlg.persistence.remoteHttp import Galactica
+from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
+from mdlg.services.via_label_manager import ViaLabelManager
 
 
 
@@ -121,7 +121,7 @@ def reset(mdlgenv: MdlgEnv):
             raise Exception("the root dir provided contains already a dir named {} - it should be a simple file".format(pathdb))
         os.remove(pathdb)
 
-    with persistence.db.PersistMandlagore(pathdb) as db:
+    with PersistMandlagore(pathdb) as db:
         version = db.ensure_schema(rebuilt=True)
         click.echo("Mdlg DB rebuilt on file : {} - version {}".format(mdlgenv.db_filename(), version))
 
@@ -143,9 +143,9 @@ def download():
 def mandragore(mdlgenv: MdlgEnv):
     # load last downloaded dumps in the DB
     pathdb  = mdlgenv.db_filename()
-    with persistence.db.PersistMandlagore(pathdb) as db:
+    with PersistMandlagore(pathdb) as db:
         dname = mdlgenv.dump_data_dirname()
-        mng = services.mandragore_dump_manager.MandragoreDumpManager(dname, db)
+        mng = MandragoreDumpManager(dname, db)
         report = mng.load_bnf_data()
         click.echo("Mdlg Mandragore dump files loaded into the DB")
         for file, report, warnings in report:
@@ -160,10 +160,10 @@ def mandragore(mdlgenv: MdlgEnv):
 def labels(mdlgenv: MdlgEnv):
     # load labels frol all the VIA annotation files available in the import folder
     pathdb  = mdlgenv.db_filename()
-    with persistence.db.PersistMandlagore(pathdb) as db:
+    with PersistMandlagore(pathdb) as db:
         dname = mdlgenv.via_annotation_dirname()
-        gal = persistence.remoteHttp.Galactica
-        vlm = services.via_label_manager.ViaLabelManager(dname, db, gal)
+        gal = Galactica
+        vlm = ViaLabelManager(dname, db, gal)
         report = vlm.import_labels()
 
         click.echo("Mdlg labels (VIA annotations) imported into the DB")

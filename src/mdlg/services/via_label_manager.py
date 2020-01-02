@@ -1,9 +1,8 @@
 
 import json
 import os
-import model.model
+from mdlg.model.model import GalacticaURL, zone_in_zone_as_pct
 import tempfile
-import persistence.db
 import click
 
 # JSON_DATA_PATH = "/Users/francois/Documents/Mandragore/DetourageImages"
@@ -93,7 +92,7 @@ class ViaLabelManager:
     @staticmethod
     def _describe_one_scene(via_data) -> dict:
         # decode the URL and get information from it
-        url = model.model.GalacticaURL(via_data["filename"])
+        url = GalacticaURL(via_data["filename"])
 
         # check we are on the Gallactica format
 
@@ -144,12 +143,12 @@ class ViaLabelManager:
 
                 scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
                 size_image = {'x': 1, 'y': 1, 'width': w, 'height': h}
-                scene_info.update(model.model.zone_in_zone_as_pct(size_image, sc['size_px']))
+                scene_info.update(zone_in_zone_as_pct(size_image, sc['size_px']))
                 scene_fields.append(scene_info)
 
                 for d in sc['descriptors']:
                     desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
-                    loc = model.model.zone_in_zone_as_pct(sc['size_px'], d['location-px'])
+                    loc = zone_in_zone_as_pct(sc['size_px'], d['location-px'])
                     desc_info.update(loc)
                     descriptor_fields.append(desc_info)
         try:

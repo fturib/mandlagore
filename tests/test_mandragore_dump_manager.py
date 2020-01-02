@@ -1,8 +1,8 @@
-import unittest.mock
+import unittest
 import tempfile
 import os
-import persistence.db
-import services.mandragore_dump_manager
+from mdlg.persistence.db import PersistMandlagore
+from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
 
 # define the 5 files needed
 
@@ -146,10 +146,10 @@ class TestViaLabelManager(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.prepare_data(tmpdir, TEST_FILES)
-            with persistence.db.PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db')) as db:
+            with PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db')) as db:
                 db.ensure_schema(True)
 
-                mng = services.mandragore_dump_manager.MandragoreDumpManager(tmpdir, db)
+                mng = MandragoreDumpManager(tmpdir, db)
                 # now try to import the files
                 mng.load_basic_data()
                 self.verify_db_content(db, queries)
@@ -171,10 +171,10 @@ class TestViaLabelManager(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.prepare_data(tmpdir, TEST_BNF_FILES)
-            with persistence.db.PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db')) as db:
+            with PersistMandlagore(os.path.join(tmpdir, 'mdlg-test.db')) as db:
                 db.ensure_schema(True)
 
-                mng = services.mandragore_dump_manager.MandragoreDumpManager(tmpdir, db)
+                mng = MandragoreDumpManager(tmpdir, db)
 
                 # now try to import the files
                 mng.load_bnf_data()

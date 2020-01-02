@@ -1,6 +1,6 @@
 
 import urllib.request
-import model.model
+from mdlg.model.model import GalacticaURL
 import json
 
 
@@ -12,7 +12,7 @@ class Galactica:
 
     @staticmethod
     def collect_image_size(documentURL: str) -> (int, int):
-        url = model.model.GalacticaURL(documentURL)
+        url = GalacticaURL(documentURL)
         info_url = url.url_image_properties()
 
         with urllib.request.urlopen(info_url) as req:
