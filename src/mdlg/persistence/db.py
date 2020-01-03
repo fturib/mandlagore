@@ -1,4 +1,3 @@
-
 import sqlite3
 from sqlite3 import Error
 import os
@@ -6,21 +5,22 @@ import csv
 import typing
 from collections import namedtuple
 
-class TableDescription(object):
 
-    def __init__(self, name:str, keys:[], fields:[]):
+class TableDescription(object):
+    def __init__(self, name: str, keys: [], fields: []):
         super().__init__()
         self.name, self.keys, self.fields = name, keys, fields
         self.all_fields = self.keys + self.fields
 
     def update_query_full_parameters(self, nameddata: [dict]) -> (str, [[]]):
-        return SQLBuilder.build_insert_into_query_with_parameters(self.name, self.all_fields),  [[d[n] if n in d else 'NULL' for n in self.all_fields] for d in nameddata]
+        return SQLBuilder.build_insert_into_query_with_parameters(self.name,
+                                                                  self.all_fields), [[d[n] if n in d else None for n in self.all_fields] for d in nameddata]
 
-    def delete_query_one_parameter(self, paramname, values:[]) -> (str, [[]]):
-        return SQLBuilder.build_delete_query_with_parameters(self.name, [paramname]),  [[d] for d in values]
+    def delete_query_one_parameter(self, paramname, values: []) -> (str, [[]]):
+        return SQLBuilder.build_delete_query_with_parameters(self.name, [paramname]), [[d] for d in values]
 
     def get_query_on_keys(self, key_values) -> (str, [[]]):
-        return SQLBuilder.build_get_query_with_parameters(self.name, self.keys),  [[d] for d in key_values] if len(self.keys)<=1 else key_values
+        return SQLBuilder.build_get_query_with_parameters(self.name, self.keys), [[d] for d in key_values] if len(self.keys) <= 1 else key_values
 
     def named_data(self, data) -> dict:
         if data is None:
@@ -29,7 +29,6 @@ class TableDescription(object):
             return dict(zip(self.all_fields, data))
         else:
             return [dict(zip(self.all_fields, d)) for d in data]
-
 
 
 TABLES_DESCRIPTIONS = [
@@ -47,23 +46,22 @@ GET_IMAGE = '''SELECT * FROM images where imageID = ?'''
 
 MASTER_QUERY = '''SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;'''
 
-class SQLBuilder:
 
+class SQLBuilder:
     @staticmethod
     def build_where_clause(criterias) -> str:
         criteria = ""
         for k, v in criterias.items():
-            criteria = criteria + " AND " if len(criteria)>0 else "" + ("%s = %s" % (k, '?' if v is None else v))
+            criteria = criteria + " AND " if len(criteria) > 0 else "" + ("%s = %s" % (k, '?' if v is None else v))
         return criteria
 
     @staticmethod
-    def build_where_clause_query(fetch: str, tablename:str, criterias: dict) -> str:
+    def build_where_clause_query(fetch: str, tablename: str, criterias: dict) -> str:
         sql = "%s FROM %s" % (fetch, tablename)
         crit = SQLBuilder.build_where_clause(criterias)
         if len(crit) > 0:
             sql = "%s WHERE %s" % (sql, crit)
         return sql
-
 
     @staticmethod
     def build_insert_into_query(tablename, fields_and_values: dict) -> str:
@@ -91,20 +89,20 @@ class SQLBuilder:
         criteria = {f: None for f in fields}
         return SQLBuilder.build_where_clause_query("SELECT *", tablename, criteria)
 
+
 class DBOperationHelper:
 
     MULTI_RECORD = 'multi-records'
     SINGLE_RECORD = 'single-record'
 
-
     def __init__(self, conn):
         self.conn = conn
 
-    def delete_records(self, tablename, criterias:dict ):
+    def delete_records(self, tablename, criterias: dict):
         sql = SQLBuilder.build_delete_records_query(tablename, criterias)
         self.conn.execute(sql)
 
-    def insert_into(self, tablename, fieldsAndValues:dict):
+    def insert_into(self, tablename, fieldsAndValues: dict):
         query = SQLBuilder.build_insert_into_query(tablename, fieldsAndValues)
         self.conn.execute(query)
 
@@ -116,10 +114,10 @@ class DBOperationHelper:
             content = content_file.read()
         self.conn.executescript(content)
 
-    def import_csv_file(self, filename, insertQuery, fieldlist, rowTranslater = None) -> (str, []):
+    def import_csv_file(self, filename, insertQuery, fieldlist, rowTranslater=None) -> (str, []):
         # sql = INSERT INTO table(field, field, ...) VALUES(?,?, ...)
         # fieldlist is an ordered set of the numbers of fields to be taken from file to the query - 0 is first index
-        #TODO manage exceptions
+        # TODO manage exceptions
 
         lines = 0
         warnings = []
@@ -138,10 +136,10 @@ class DBOperationHelper:
         self.conn.commit()
         return "%d lines imported" % lines, warnings
 
-    def import_csv_mode_file(self, filename, insertQuery, encoding, delim, mode, fieldlist, rowTranslater = None) -> (str, []):
+    def import_csv_mode_file(self, filename, insertQuery, encoding, delim, mode, fieldlist, rowTranslater=None) -> (str, []):
         # sql = INSERT INTO table(field, field, ...) VALUES(?,?, ...)
         # fieldlist is an ordered set of the numbers of fields to be taken from file to the query - 0 is first index
-        #TODO manage exceptions
+        # TODO manage exceptions
 
         lines = 0
         warnings = []
@@ -159,13 +157,12 @@ class DBOperationHelper:
                         except Exception as e:
                             warnings.append("%s : the line (%s) could not be imported : %s" % (filename, ",".join(data), str(e)))
                 lines += 1
-        
+
         self.conn.commit()
         return "%d lines imported" % lines, warnings
 
 
 class PersistMandlagore(object):
-
     def __init__(self, filename=None):
         self.version = None
         self.conn = None
@@ -205,7 +202,6 @@ class PersistMandlagore(object):
 
         return self.schema_version()
 
-
     def delete_mandragore_related(self, mandragore_ids):
         q, d = TABLES['scenes'].delete_query_one_parameter('mandragoreID', mandragore_ids)
         self.conn.executemany(q, d)
@@ -232,7 +228,7 @@ class PersistMandlagore(object):
     def retrieve_image(self, imageID):
         query, data = TABLES['images'].get_query_on_keys([imageID])
         return TABLES['images'].named_data(self.conn.cursor().execute(query, data[0]).fetchone())
-    
+
     def schema_version(self):
         if self.version is None:
             for r in self.conn.execute("SELECT version FROM config"):

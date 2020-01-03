@@ -40,7 +40,6 @@ class MandragoreDumpManager:
     #  - documenturl-dre.csv
 
     # all are Tab separated values. " is the string delimitor. Encoding is UTF8
-
     DUMP_DATA = {
         'classes.csv': {
             'table': "classes",
@@ -81,36 +80,24 @@ class MandragoreDumpManager:
         },
     }
 
-    BnfDumpData = collections.namedtuple('BnfDumpData', [
-        'filename', 'encoding', 'table', 'fields', 'mode', 'columns',
-        'delimiter', 'transform'
-    ])
+    BnfDumpData = collections.namedtuple('BnfDumpData', ['filename', 'encoding', 'table', 'fields', 'mode', 'columns', 'delimiter', 'transform'])
     BNF_DUMP_DATA = [
         # 53138757-80	https://gallica.bnf.fr/iiif/ark:/12148/btv1b531387571/f80/full/pct:50/0/native.jpg
-        BnfDumpData('Zoologie-URLs-Gallica.txt', 'utf-8', "images",
-                    ["imageID", "documentURL"],
-                    DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
+        BnfDumpData('Zoologie-URLs-Gallica.txt', 'utf-8', "images", ["imageID", "documentURL"], DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
 
         # 7842457-1	http://visualiseur.bnf.fr/ConsulterElementNum?O=IFN-7842457&E=JPEG&Deb=1&Fin=1&Param=E
-        BnfDumpData('Zoologie-URLs-DRE-Mandragore.txt', 'utf-8', "images",
-                    ["imageID", "documentURL"],
-                    DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
+        BnfDumpData('Zoologie-URLs-DRE-Mandragore.txt', 'utf-8', "images", ["imageID", "documentURL"], DBOperationHelper.SINGLE_RECORD, [0, 1], '\t', None),
 
         # 10507217-143;#78047;#78048;#78049;#78050
-        BnfDumpData('Zoologie-images-notices.csv', 'latin_1', "scenes",
-                    ["mandragoreID", "imageID"],
-                    DBOperationHelper.MULTI_RECORD, [1, 0], ';',
+        BnfDumpData('Zoologie-images-notices.csv', 'latin_1', "scenes", ["mandragoreID", "imageID"], DBOperationHelper.MULTI_RECORD, [1, 0], ';',
                     _descriptor_image_csv_preprocess),
 
         # 100327;chien (100327);faucon (100327);oiseau (100327);perdrix (100327);
-        BnfDumpData('Zoologie-notices-descripteurs.csv', 'latin_1',
-                    "descriptors", ["mandragoreID", "classID"],
-                    DBOperationHelper.MULTI_RECORD, [0, 1], ';',
+        BnfDumpData('Zoologie-notices-descripteurs.csv', 'latin_1', "descriptors", ["mandragoreID", "classID"], DBOperationHelper.MULTI_RECORD, [0, 1], ';',
                     _descriptor_classe_csv_preprocess),
 
         # 100327;chien (100327);faucon (100327);oiseau (100327);perdrix (100327);
-        BnfDumpData('Zoologie-notices-descripteurs.csv', 'latin_1', "classes",
-                    ["classID"], DBOperationHelper.MULTI_RECORD, [1], ';',
+        BnfDumpData('Zoologie-notices-descripteurs.csv', 'latin_1', "classes", ["classID"], DBOperationHelper.MULTI_RECORD, [1], ';',
                     _descriptor_classe_csv_preprocess),
     ]
 
@@ -126,16 +113,11 @@ class MandragoreDumpManager:
         dbHelper = DBOperationHelper(self.persistance.conn)
         for doc, params in self.DUMP_DATA.items():
             full_docname = os.path.join(self.rootdir, doc)
-            if not (os.path.exists(full_docname)
-                    and os.path.isfile(full_docname)):
+            if not (os.path.exists(full_docname) and os.path.isfile(full_docname)):
                 # need to warn the file is not processed
-                raise FileNotFoundError(
-                    "Cannot import basic data as file {} is mising.".format(
-                        full_docname))
-            query = SQLBuilder.build_insert_into_query_with_parameters(
-                params["table"], params["fields"])
-            report, warnings = dbHelper.import_csv_file(
-                full_docname, query, params["csv"], params["preprocess"])
+                raise FileNotFoundError("Cannot import basic data as file {} is mising.".format(full_docname))
+            query = SQLBuilder.build_insert_into_query_with_parameters(params["table"], params["fields"])
+            report, warnings = dbHelper.import_csv_file(full_docname, query, params["csv"], params["preprocess"])
             imported.append((doc, report, warnings))
         return imported
 
@@ -146,16 +128,10 @@ class MandragoreDumpManager:
         dbHelper = DBOperationHelper(self.persistance.conn)
         for filename, encoding, tablename, fields, record_mode, columns, delim, transform in self.BNF_DUMP_DATA:
             full_docname = os.path.join(self.rootdir, filename)
-            if not (os.path.exists(full_docname)
-                    and os.path.isfile(full_docname)):
+            if not (os.path.exists(full_docname) and os.path.isfile(full_docname)):
                 # need to warn the file is not processed
-                raise FileNotFoundError(
-                    "Cannot import basic data as file {} is mising.".format(
-                        full_docname))
-            query = SQLBuilder.build_insert_into_query_with_parameters(
-                tablename, fields)
-            report, warnings = dbHelper.import_csv_mode_file(
-                full_docname, query, encoding, delim, record_mode, columns,
-                transform)
+                raise FileNotFoundError("Cannot import basic data as file {} is mising.".format(full_docname))
+            query = SQLBuilder.build_insert_into_query_with_parameters(tablename, fields)
+            report, warnings = dbHelper.import_csv_mode_file(full_docname, query, encoding, delim, record_mode, columns, transform)
             imported.append((filename, report, warnings))
         return imported

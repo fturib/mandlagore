@@ -1,10 +1,9 @@
-
 import unittest
 import tempfile
 from mdlg.persistence.db import PersistMandlagore
 
-class TestDB(unittest.TestCase):
 
+class TestDB(unittest.TestCase):
     def test_creating_db(self):
         tmp = tempfile.NamedTemporaryFile(suffix='db', prefix='tmp-mdlg')
         with PersistMandlagore(tmp.name) as db:
@@ -12,10 +11,10 @@ class TestDB(unittest.TestCase):
             self.assertIsNotNone(version)
 
     def test_fetching_image(self):
-        IMAGE = {'imageID': 'name-page', 'documentURL': 'http://localhist:8080/whatever', 'width': 1000, 'height':2000}
+        IMAGE = {'imageID': 'name-page', 'documentURL': 'http://localhist:8080/whatever', 'width': 1000, 'height': 2000}
         tmp = tempfile.NamedTemporaryFile(suffix='db', prefix='tmp-mdlg')
         with PersistMandlagore(tmp.name) as db:
-            version = db.ensure_schema(rebuilt=True)            
+            version = db.ensure_schema(rebuilt=True)
             self.assertIsNotNone(version)
             db.ensure_images([IMAGE])
             data = db.retrieve_image(IMAGE['imageID'])

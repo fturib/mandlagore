@@ -1,4 +1,3 @@
-
 import click
 import os
 from mdlg.persistence.db import PersistMandlagore
@@ -6,9 +5,7 @@ from mdlg.persistence.remoteHttp import Galactica
 from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
 from mdlg.services.via_label_manager import ViaLabelManager
 
-
-
-#TODO to initialize the DB
+# TODO to initialize the DB
 # 1- we consider the schema is ready
 # 2- load CSV files into SQLite and use an SQL to insert into the corresponding tables
 # TODO - choose the option to update(add) or replace
@@ -25,7 +22,6 @@ from mdlg.services.via_label_manager import ViaLabelManager
 # 8- run training of the ML for class detection and estimate accuracy - keep track
 # 9- compute both prediction on a random page of manuscript
 
-
 # mdcli --rootpath
 #  arguments :
 #   reset (clear all the data folder, w/o backup)
@@ -39,8 +35,6 @@ from mdlg.services.via_label_manager import ViaLabelManager
 #   predict-scene <document-id, page> (download the image, get a prediction for dhsegment, extract the scene, and show result)
 #   classify (generate the training-set for class detection and run the training for class detection - return accuracy)
 #   predict <document-id, page> (download the image, and then compute a prediction for class - and the image produced)
-
-
 
 # -/ (default to position of current file / DATA
 # ---  mdlg.db
@@ -57,17 +51,18 @@ from mdlg.services.via_label_manager import ViaLabelManager
 # -------/ mandragore-dump
 # -------/ csv-labels
 
+
 class MdlgEnv(object):
     DIR_LOCATION = {
         'images': 'images',
-        'galactica' : 'images/galactica',
+        'galactica': 'images/galactica',
         'dre': 'images/dre',
-        'dhsegment_train' : 'images/generated/dhsegment/train',
-        'dhsegment_predict' : 'images/generated/dhsegment/predict',
-        'classify_train' : 'images/generated/classify/train',
-        'classify_predict' : 'images/generated/classify/predict',
-        'import_dumps' : 'import/mandragore-dumps',
-        'import_labels' : 'import/via-labels'
+        'dhsegment_train': 'images/generated/dhsegment/train',
+        'dhsegment_predict': 'images/generated/dhsegment/predict',
+        'classify_train': 'images/generated/classify/train',
+        'classify_predict': 'images/generated/classify/predict',
+        'import_dumps': 'import/mandragore-dumps',
+        'import_labels': 'import/via-labels'
     }
     DB_FILENAME = 'mdlg.db'
 
@@ -76,10 +71,10 @@ class MdlgEnv(object):
         self._rootdir = rootdir
         for k in MdlgEnv.DIR_LOCATION:
             self._ensure_and_check_dir(k)
-    
+
     def db_filename(self) -> str:
         return os.path.join(self._rootdir, MdlgEnv.DB_FILENAME)
-    
+
     def _ensure_and_check_dir(self, key_name) -> str:
         dname = os.path.join(self._rootdir, MdlgEnv.DIR_LOCATION[key_name])
         if not os.path.exists(dname):
@@ -96,26 +91,29 @@ class MdlgEnv(object):
 
     def __repr__(self):
         return '<MdlgEnv %r>' % self._rootdir
-        
+
+
 pass_env = click.make_pass_decorator(MdlgEnv)
 
 # envvar 'MDLG_DATA' is pointing the dir where we can find the DB and folders for saving images, data for trainingm prediction etc ...
 
+
 @click.group()
 @click.version_option('0.01')
-@click.option("--root", 
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True, resolve_path=True, allow_dash=False), 
-    envvar='MDLG_DATA')
+@click.option("--root",
+              type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True, resolve_path=True, allow_dash=False),
+              envvar='MDLG_DATA')
 @click.pass_context
 def mdcli(ctx, root):
     ctx.obj = MdlgEnv(root)
+
 
 @mdcli.command()
 @click.confirmation_option(prompt='Are you sure you want to reset all data, including dropping the db?')
 @pass_env
 def reset(mdlgenv: MdlgEnv):
     # ensure the DB file is wiped-out
-    pathdb  = mdlgenv.db_filename()
+    pathdb = mdlgenv.db_filename()
     if os.path.exists(pathdb):
         if not os.path.isfile(pathdb):
             raise Exception("the root dir provided contains already a dir named {} - it should be a simple file".format(pathdb))
@@ -130,19 +128,22 @@ def reset(mdlgenv: MdlgEnv):
 def backup():
     click.echo("Not yet implemented")
 
+
 @mdcli.command()
 def restore():
     click.echo("Not yet implemented")
+
 
 @mdcli.command()
 def download():
     click.echo("Not yet implemented")
 
+
 @mdcli.command()
 @pass_env
 def mandragore(mdlgenv: MdlgEnv):
     # load last downloaded dumps in the DB
-    pathdb  = mdlgenv.db_filename()
+    pathdb = mdlgenv.db_filename()
     with PersistMandlagore(pathdb) as db:
         dname = mdlgenv.dump_data_dirname()
         mng = MandragoreDumpManager(dname, db)
@@ -155,11 +156,12 @@ def mandragore(mdlgenv: MdlgEnv):
                 for w in warnings[:10]:
                     click.echo(" -- W -- %s" % w)
 
+
 @mdcli.command()
 @pass_env
 def labels(mdlgenv: MdlgEnv):
     # load labels frol all the VIA annotation files available in the import folder
-    pathdb  = mdlgenv.db_filename()
+    pathdb = mdlgenv.db_filename()
     with PersistMandlagore(pathdb) as db:
         dname = mdlgenv.via_annotation_dirname()
         gal = Galactica
@@ -174,17 +176,21 @@ def labels(mdlgenv: MdlgEnv):
                 for w in warnings[:10]:
                     click.echo(" -- W -- %s" % w)
 
+
 @mdcli.command()
 def galactica():
     click.echo("Not yet implemented")
+
 
 @mdcli.command()
 def dhsegment():
     click.echo("Not yet implemented")
 
+
 @mdcli.command()
 def predict():
     click.echo("Not yet implemented")
+
 
 @mdcli.command()
 def classify():

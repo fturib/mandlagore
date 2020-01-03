@@ -136,36 +136,21 @@ class TestViaLabelManager(unittest.TestCase):
         for query, exist in totests.items():
             cur.execute(query)
             rows = cur.fetchall()
-            self.assertEqual(
-                exist,
-                len(rows) > 0,
-                "invalid result in request : {} - value {} expect".format(
-                    query, exist))
+            self.assertEqual(exist, len(rows) > 0, "invalid result in request : {} - value {} expect".format(query, exist))
 
     def test_reorganized_dumps(self):
         queries = {
-            "SELECT * FROM classes":
-            True,
-            "SELECT * FROM classes WHERE classID = 'abeille'":
-            True,
-            "SELECT * FROM classes WHERE classID = 'lion'":
-            False,
-            "SELECT * FROM images WHERE imageID = '7842457-1'":
-            True,
-            "SELECT * FROM images WHERE imageID = '52504824-10'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = '51326'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '52504824-10'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '7842457-1'":
-            False,
-            "SELECT * FROM descriptors WHERE classID = 'abeille'":
-            True,
-            "SELECT * FROM descriptors WHERE classID = 'abeille' AND mandragoreID = 51125":
-            True,
-            "SELECT * FROM descriptors WHERE classID = 'oreilles' AND mandragoreID = 51125":
-            False,
+            "SELECT * FROM classes": True,
+            "SELECT * FROM classes WHERE classID = 'abeille'": True,
+            "SELECT * FROM classes WHERE classID = 'lion'": False,
+            "SELECT * FROM images WHERE imageID = '7842457-1'": True,
+            "SELECT * FROM images WHERE imageID = '52504824-10'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = '51326'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '52504824-10'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '7842457-1'": False,
+            "SELECT * FROM descriptors WHERE classID = 'abeille'": True,
+            "SELECT * FROM descriptors WHERE classID = 'abeille' AND mandragoreID = 51125": True,
+            "SELECT * FROM descriptors WHERE classID = 'oreilles' AND mandragoreID = 51125": False,
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -180,28 +165,17 @@ class TestViaLabelManager(unittest.TestCase):
 
     def test_bnf_dumps(self):
         queries = {
-            "SELECT * FROM classes":
-            True,
-            "SELECT * FROM classes WHERE classID = 'biche'":
-            True,
-            "SELECT * FROM classes WHERE classID = 'abeille'":
-            False,
-            "SELECT * FROM images WHERE imageID = '7823277-1'":
-            True,
-            "SELECT * FROM images WHERE imageID = '52504824-151'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = '52957'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = 181563 AND imageID = '10308906-65'":
-            True,
-            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '10500687-147'":
-            False,
-            "SELECT * FROM descriptors WHERE classID = 'taureau'":
-            True,
-            "SELECT * FROM descriptors WHERE classID = 'taureau' AND mandragoreID = 10005":
-            True,
-            "SELECT * FROM descriptors WHERE classID = 'oreilles' AND mandragoreID = 10005":
-            False,
+            "SELECT * FROM classes": True,
+            "SELECT * FROM classes WHERE classID = 'biche'": True,
+            "SELECT * FROM classes WHERE classID = 'abeille'": False,
+            "SELECT * FROM images WHERE imageID = '7823277-1'": True,
+            "SELECT * FROM images WHERE imageID = '52504824-151'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = '52957'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = 181563 AND imageID = '10308906-65'": True,
+            "SELECT * FROM scenes WHERE mandragoreID = 40999 AND imageID = '10500687-147'": False,
+            "SELECT * FROM descriptors WHERE classID = 'taureau'": True,
+            "SELECT * FROM descriptors WHERE classID = 'taureau' AND mandragoreID = 10005": True,
+            "SELECT * FROM descriptors WHERE classID = 'oreilles' AND mandragoreID = 10005": False,
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
