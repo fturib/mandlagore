@@ -1,4 +1,5 @@
 import unittest
+import unittest.mock
 import json
 import tempfile
 from mdlg.services.via_label_manager import ViaLabelManager
@@ -40,16 +41,16 @@ SCENES = [
     {'mandragoreID': 'ID1',
      'documentURL': 'URL1',
      'imageID': 'doc-page1',
-     'size_px': {'x': 1, 'y': 1, 'width': 100, 'height': 200},
+     'size': {'x': 1, 'y': 1, 'width': 100, 'height': 200},
      'descriptors': [
-         {'classID': 'dog', 'location-px': {'x': 5, 'y': 5, 'width': 10, 'height': 40}}]
+         {'classID': 'dog', 'location': {'x': 5, 'y': 5, 'width': 10, 'height': 40}}]
      },
     {'mandragoreID': 'ID2',
      'documentURL': 'URL2',
      'imageID': 'doc-page2',
-     'size_px': {'x': 2, 'y': 2, 'width': 200, 'height': 500},
+     'size': {'x': 2, 'y': 2, 'width': 200, 'height': 500},
      'descriptors': [
-         {'classID': 'dog', 'location-px': {'x': 50, 'y': 50, 'width': 20, 'height': 100}}]
+         {'classID': 'dog', 'location': {'x': 50, 'y': 50, 'width': 20, 'height': 100}}]
      }
 ]
 
@@ -72,7 +73,7 @@ class TestViaLabelManager(unittest.TestCase):
         self.assertEqual("60106", f11['mandragoreID'])
         self.assertEqual("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg", f11['documentURL'])
         self.assertEqual("8470209-11", f11['imageID'])
-        self.assertDictEqual({'x':398, 'y':195, 'width':2317, 'height': 3945}, f11['size_px'])
+        self.assertDictEqual({'x':398, 'y':195, 'width':2317, 'height': 3945}, f11['size'])
         self.assertEqual(2, len(f11['descriptors']))
         self.assertEqual('armoiries', f11['descriptors'][0]['classID'])
         self.assertEqual('serpent', f11['descriptors'][1]['classID'])

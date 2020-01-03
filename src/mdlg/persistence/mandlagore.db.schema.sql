@@ -41,10 +41,10 @@ DROP TABLE IF EXISTS "scenes";
 CREATE TABLE IF NOT EXISTS "scenes" (
 	"mandragoreID"	INTEGER, -- pk of this table, fk om mandragores
 	"imageID"	TEXT,        -- pk of this table, fk on images
-	"x"	FLOAT,               -- x, y are part of pk - location and size of this scene relative to image. Values in pct. x, y middle of the zone
-	"y"	FLOAT,
-	"width"	FLOAT,
-	"height"	FLOAT
+	"x"	INTEGER,               -- x, y are part of pk - location and size of this scene relative to image. Values in pixels
+	"y"	INTEGER,
+	"width"	INTEGER,
+	"height" INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "pk_scenes" ON "scenes" (
 	"mandragoreID",
@@ -66,10 +66,10 @@ DROP TABLE IF EXISTS "descriptors";
 CREATE TABLE IF NOT EXISTS "descriptors" (
 	"mandragoreID"	INTEGER, -- fk to scene - part of pk.
 	"classID" TEXT,           -- fk to class - part of pk.
-	"x"	FLOAT,               -- location of the class relative to image. values in pct. x, y middle of the zone
-	"y"	FLOAT,
-	"width"	FLOAT,
-	"height"	FLOAT
+	"x"	INTEGER,               -- location of the class relative to image. values in pixels
+	"y"	INTEGER,
+	"width"	INTEGER,
+	"height" INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "pk_descriptors" ON "descriptors" (
 	"mandragoreID",

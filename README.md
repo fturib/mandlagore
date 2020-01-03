@@ -4,6 +4,7 @@ Expect help to label Mandragore db using Deep Learning on the illuminations of d
 main DB of images are Gallica and DRE.
 
 Explanation of data available for Mandragore is available [here, on the BNF website](http://api.bnf.fr/dumps-mandragore)
+We needs to download images from the BNF's db Gallica. Description of the API is available here: [IIIF's API for fetching images from Gallica](http://api.bnf.fr/api-iiif-de-recuperation-des-images-de-gallica)
 
 ## Status
 

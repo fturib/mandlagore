@@ -112,10 +112,10 @@ class ViaLabelManager:
         for region in via_data['regions']:
             class_id = region['region_attributes']['Descripteur']
             size_px = region['shape_attributes']
-            descriptors.append({'classID':class_id, 'location-px':size_px})
+            descriptors.append({'classID':class_id, 'location':size_px})
         
         return {'mandragoreID' : mandragore_id, 'documentURL':document_url, 'imageID':image_id,
-                'size_px': size_image, 'descriptors':descriptors}
+                'size': size_image, 'descriptors':descriptors}
 
     def record_scenes(self, scenes, title = 'prepare scenes') -> str:
         # ensure to delete data tied to the corresponding 'mandragoreID'
@@ -141,15 +141,12 @@ class ViaLabelManager:
                 else:
                     w, h = image['width'], image['height']
 
-                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
-                size_image = {'x': 1, 'y': 1, 'width': w, 'height': h}
-                scene_info.update(zone_in_zone_as_pct(size_image, sc['size_px']))
+                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID'], 'width': w, 'height': h}
                 scene_fields.append(scene_info)
 
                 for d in sc['descriptors']:
                     desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
-                    loc = zone_in_zone_as_pct(sc['size_px'], d['location-px'])
-                    desc_info.update(loc)
+                    desc_info.update(d['location'])
                     descriptor_fields.append(desc_info)
         try:
             self.db.delete_mandragore_related(mandragore_ids)
