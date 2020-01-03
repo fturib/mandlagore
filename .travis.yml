@@ -4,5 +4,5 @@ python:
 # command to install dependencies
 install:
   - pip install .
-# command to run tests
+# command to run tests - may have to tune
 script: python -m unittest tests/test_*.py -v
