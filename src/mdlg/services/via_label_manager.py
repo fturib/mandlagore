@@ -1,7 +1,7 @@
 
 import json
 import os
-from mdlg.model.model import GalacticaURL, zone_in_zone_as_pct
+from mdlg.model.model import GalacticaURL, zone_in_zone_as_pct, ZONE_FULL
 import tempfile
 import click
 
@@ -14,39 +14,39 @@ class InvalidFilenameError(Exception):
 
 class ViaLabelManager:
 
-# Labels are delivered in JSON files encoded (UTF-8) :
-# Each file is a dict (documentURL, dict( - description - )
-# {"https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg-1":
-#      {"filename":"https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg",
-#       "size":-1,
-#       "regions":[
-#           {"shape_attributes":
-#                {"name":"rect",
-#                 "x":449,
-#                 "y":1610,
-#                 "width":1363,
-#                 "height":1257},
-#            "region_attributes":
-#                {"Descripteur":"armoiries",
-#                 "Type":"objet"}
-#           },
-#           {"shape_attributes":{
-#               "name":"rect",
-#               "x":656,
-#               "y":122,
-#               "width":875,
-#               "height":568},
-#             "region_attributes":{
-#                 "Descripteur":"serpent",
-#                 "Type":"objet"}
-#           },
-#           ...
-#       ],
-#       "file_attributes":{
-#           "MandragoreId":"60106"}
-#       }
-#       ...
-#  }
+    # Labels are delivered in JSON files encoded (UTF-8) :
+    # Each file is a dict (documentURL, dict( - description - )
+    # {"https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg-1":
+    #      {"filename":"https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/398,195,2317,3945/full/0/native.jpg",
+    #       "size":-1,
+    #       "regions":[
+    #           {"shape_attributes":
+    #                {"name":"rect",
+    #                 "x":449,
+    #                 "y":1610,
+    #                 "width":1363,
+    #                 "height":1257},
+    #            "region_attributes":
+    #                {"Descripteur":"armoiries",
+    #                 "Type":"objet"}
+    #           },
+    #           {"shape_attributes":{
+    #               "name":"rect",
+    #               "x":656,
+    #               "y":122,
+    #               "width":875,
+    #               "height":568},
+    #             "region_attributes":{
+    #                 "Descripteur":"serpent",
+    #                 "Type":"objet"}
+    #           },
+    #           ...
+    #       ],
+    #       "file_attributes":{
+    #           "MandragoreId":"60106"}
+    #       }
+    #       ...
+    #  }
 
     def __init__(self, rootdir, db, galactica):
         self.rootdir = rootdir
@@ -55,7 +55,7 @@ class ViaLabelManager:
         pass
 
     def list_labeled_files(self) -> []:
-        files =[]
+        files = []
         for r, d, f in os.walk(self.rootdir):
             for file in f:
                 if '.json' in file:
@@ -64,7 +64,7 @@ class ViaLabelManager:
 
     def load_all_labeled_files(self) -> ([], []):
         scenes = []
-        warnings =[]
+        warnings = []
         for f in self.list_labeled_files():
             sc, wa = self.load_one_labeled_file(f)
             scenes.extend(sc)
@@ -79,7 +79,7 @@ class ViaLabelManager:
             data = json.load(fp)
 
         scenes = []
-        warnings =[]
+        warnings = []
         for v in data.values():
             try:
                 scene = self._describe_one_scene(v)
@@ -92,7 +92,7 @@ class ViaLabelManager:
     @staticmethod
     def _describe_one_scene(via_data) -> dict:
         # decode the URL and get information from it
-        url = GalacticaURL(via_data["filename"])
+        url = GalacticaURL.from_url(via_data["filename"])
 
         # check we are on the Gallactica format
 
@@ -108,16 +108,16 @@ class ViaLabelManager:
         mandragore_id = via_data['file_attributes']['MandragoreId']
         descriptors = []
 
-        size_image = url.size_px()
+        size_image = url.zone()
         for region in via_data['regions']:
             class_id = region['region_attributes']['Descripteur']
             size_px = region['shape_attributes']
-            descriptors.append({'classID':class_id, 'location-px':size_px})
+            descriptors.append({'classID': class_id, 'location': size_px})
         
-        return {'mandragoreID' : mandragore_id, 'documentURL':document_url, 'imageID':image_id,
-                'size_px': size_image, 'descriptors':descriptors}
+        return {'mandragoreID': mandragore_id, 'documentURL': document_url, 'imageID': image_id,
+                'size': size_image, 'descriptors': descriptors}
 
-    def record_scenes(self, scenes, title = 'prepare scenes') -> str:
+    def record_scenes(self, scenes, title='prepare scenes') -> str:
         # ensure to delete data tied to the corresponding 'mandragoreID'
         # then add
         #   - images's records
@@ -134,22 +134,21 @@ class ViaLabelManager:
             for sc in bar:
                 mandragore_ids.add(sc['mandragoreID'])
                 image = self.db.retrieve_image(sc['imageID'])
+                gal = GalacticaURL.from_url(sc['documentURL']).set_zone(ZONE_FULL)
+                # TODO - WARNING - we may have a side effect on location of scenes and descriptors if the initial image has been resized in VIA (eg pct:50)
                 if image is None or image['width'] is None or image['height'] is None:
                     # need to retrieve the size of the image
-                    w, h = self.galactica.collect_image_size(sc['documentURL'])
-                    images_fields.append({'imageID': sc['imageID'], 'documentURL': sc['documentURL'], 'width': w, 'height': h})
+                    w, h = self.galactica.collect_image_size(gal.as_url())
+                    images_fields.append({'imageID': sc['imageID'], 'documentURL': gal.as_url(), 'width': w, 'height': h})
                 else:
                     w, h = image['width'], image['height']
 
-                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
-                size_image = {'x': 1, 'y': 1, 'width': w, 'height': h}
-                scene_info.update(zone_in_zone_as_pct(size_image, sc['size_px']))
+                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID'], 'width': w, 'height': h}
                 scene_fields.append(scene_info)
 
                 for d in sc['descriptors']:
                     desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
-                    loc = zone_in_zone_as_pct(sc['size_px'], d['location-px'])
-                    desc_info.update(loc)
+                    desc_info.update(d['location'])
                     descriptor_fields.append(desc_info)
         try:
             self.db.delete_mandragore_related(mandragore_ids)
