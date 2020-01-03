@@ -39,14 +39,14 @@ gallica_12148_f11 = {"https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/3
 
 SCENES = [
     {'mandragoreID': 'ID1',
-     'documentURL': 'URL1',
+     'documentURL': 'https://gallica.bnf.fr/iiif/ark:/12148/doc/page1/5,5,10,40/full/0/native.jpg',
      'imageID': 'doc-page1',
      'size': {'x': 1, 'y': 1, 'width': 100, 'height': 200},
      'descriptors': [
          {'classID': 'dog', 'location': {'x': 5, 'y': 5, 'width': 10, 'height': 40}}]
      },
     {'mandragoreID': 'ID2',
-     'documentURL': 'URL2',
+     'documentURL': 'https://gallica.bnf.fr/iiif/ark:/12148/doc/page2/2,2,200,500/full/0/native.jpg',
      'imageID': 'doc-page2',
      'size': {'x': 2, 'y': 2, 'width': 200, 'height': 500},
      'descriptors': [
@@ -91,6 +91,6 @@ class TestViaLabelManager(unittest.TestCase):
 
                     db.delete_mandragore_related.assert_called_once_with(frozenset(['ID1', 'ID2']))
                     db.ensure_images.assert_called_once_with([
-                        {'imageID': 'doc-page1', 'documentURL':'URL1', 'width':1000, 'height':2000},
-                        {'imageID': 'doc-page2', 'documentURL':'URL2', 'width':1000, 'height':2000},
+                        {'imageID': 'doc-page1', 'documentURL':'https://gallica.bnf.fr/iiif/ark:/12148/doc/page1/full/full/0/native.jpg', 'width':1000, 'height':2000},
+                        {'imageID': 'doc-page2', 'documentURL':'https://gallica.bnf.fr/iiif/ark:/12148/doc/page2/full/full/0/native.jpg', 'width':1000, 'height':2000},
                     ])

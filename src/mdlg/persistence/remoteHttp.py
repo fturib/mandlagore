@@ -12,8 +12,8 @@ class Galactica:
 
     @staticmethod
     def collect_image_size(documentURL: str) -> (int, int):
-        url = GalacticaURL(documentURL)
-        info_url = url.url_image_properties()
+        url = GalacticaURL.from_url(documentURL)
+        info_url = url.url_image_properties().as_url()
 
         with urllib.request.urlopen(info_url) as req:
             data = json.loads(req.read())

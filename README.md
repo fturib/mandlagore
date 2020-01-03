@@ -98,7 +98,7 @@ python3 mdcli.py mandragore
 Mandragore Team started to label documents.
 They use the [VIA annotation tool, v2, available here](http://www.robots.ox.ac.uk/~vgg/software/via/)
 
-the json files, result of this labelisation are presented on this page of the bnf website: [Échantillon segmenté d'enluminures de Mandragore](http://api.bnf.fr/mandragore-echantillon-segmente-2019) 
+the json files, result of this labelisation are presented on this page of the bnf website: [Échantillon segmenté d'enluminures de Mandragore](http://api.bnf.fr/mandragore-echantillon-segmente-2019)
 
 you will need to download the raw annotations in json format provided on this page:
 
