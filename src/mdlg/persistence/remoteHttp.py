@@ -1,11 +1,9 @@
-
 import urllib.request
 from mdlg.model.model import GalacticaURL
 import json
 
 
 class Galactica:
-
     @staticmethod
     def download_image(documentURL: str, filename: str):
         urllib.request.urlretrieve(documentURL, filename)
@@ -30,4 +28,3 @@ class Galactica:
 
 class DRE:
     pass
-
