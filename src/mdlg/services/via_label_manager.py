@@ -1,4 +1,3 @@
-
 import json
 import os
 from mdlg.model.model import GalacticaURL, zone_in_zone_as_pct, ZONE_FULL
@@ -85,7 +84,9 @@ class ViaLabelManager:
                 scene = self._describe_one_scene(v)
                 scenes.append(scene)
             except InvalidFilenameError as e:
-                warnings.append("file %s - one scene cannot be prepared for import. Reason : %s" % (filepath, str(e)))
+                warnings.append(
+                    "file %s - one scene cannot be prepared for import. Reason : %s"
+                    % (filepath, str(e)))
 
         return scenes, warnings
 
@@ -97,7 +98,9 @@ class ViaLabelManager:
         # check we are on the Gallactica format
 
         if not url.is_valid():
-            raise InvalidFilenameError('the url : {0} is not a valid galactica url'.format(via_data["filename"]))
+            raise InvalidFilenameError(
+                'the url : {0} is not a valid galactica url'.format(
+                    via_data["filename"]))
 
         # need to check if one of the params is "pct:xx"
         # -> provide the zoom on the image and therefore the right locations
@@ -113,9 +116,14 @@ class ViaLabelManager:
             class_id = region['region_attributes']['Descripteur']
             size_px = region['shape_attributes']
             descriptors.append({'classID': class_id, 'location': size_px})
-        
-        return {'mandragoreID': mandragore_id, 'documentURL': document_url, 'imageID': image_id,
-                'size': size_image, 'descriptors': descriptors}
+
+        return {
+            'mandragoreID': mandragore_id,
+            'documentURL': document_url,
+            'imageID': image_id,
+            'size': size_image,
+            'descriptors': descriptors
+        }
 
     def record_scenes(self, scenes, title='prepare scenes') -> str:
         # ensure to delete data tied to the corresponding 'mandragoreID'
@@ -134,20 +142,35 @@ class ViaLabelManager:
             for sc in bar:
                 mandragore_ids.add(sc['mandragoreID'])
                 image = self.db.retrieve_image(sc['imageID'])
-                gal = GalacticaURL.from_url(sc['documentURL']).set_zone(ZONE_FULL)
+                gal = GalacticaURL.from_url(
+                    sc['documentURL']).set_zone(ZONE_FULL)
                 # TODO - WARNING - we may have a side effect on location of scenes and descriptors if the initial image has been resized in VIA (eg pct:50)
-                if image is None or image['width'] is None or image['height'] is None:
+                if image is None or image['width'] is None or image[
+                        'height'] is None:
                     # need to retrieve the size of the image
                     w, h = self.galactica.collect_image_size(gal.as_url())
-                    images_fields.append({'imageID': sc['imageID'], 'documentURL': gal.as_url(), 'width': w, 'height': h})
+                    images_fields.append({
+                        'imageID': sc['imageID'],
+                        'documentURL': gal.as_url(),
+                        'width': w,
+                        'height': h
+                    })
                 else:
                     w, h = image['width'], image['height']
 
-                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID'], 'width': w, 'height': h}
+                scene_info = {
+                    'mandragoreID': sc['mandragoreID'],
+                    'imageID': sc['imageID'],
+                    'width': w,
+                    'height': h
+                }
                 scene_fields.append(scene_info)
 
                 for d in sc['descriptors']:
-                    desc_info = {'mandragoreID': sc['mandragoreID'], 'classID': d['classID']}
+                    desc_info = {
+                        'mandragoreID': sc['mandragoreID'],
+                        'classID': d['classID']
+                    }
                     desc_info.update(d['location'])
                     descriptor_fields.append(desc_info)
         try:
@@ -157,7 +180,8 @@ class ViaLabelManager:
             self.db.add_descriptors(descriptor_fields)
             return "%d scenes imported in DB." % len(scenes)
         except Exception as e:
-            return "Was not able to import the %d scenes in DB. Reason : %s" % (len(scenes), str(e))
+            return "Was not able to import the %d scenes in DB. Reason : %s" % (
+                len(scenes), str(e))
 
     def import_labels(self) -> ():
         report = []
@@ -168,13 +192,6 @@ class ViaLabelManager:
                 rep = self.record_scenes(scenes, f)
                 report.append((f, warnings, rep))
         else:
-            report.append(("--NO FILE--", [], "No .json files found in %s" % self.rootdir))
+            report.append(("--NO FILE--", [],
+                           "No .json files found in %s" % self.rootdir))
         return report
-            
-
-
-
-
-
-
-
