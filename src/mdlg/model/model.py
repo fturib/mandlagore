@@ -24,14 +24,10 @@ class GalacticaURL:
         return int(self.params[7][1:])
 
     def zone(self) -> ():
-        return ZONE_FULL if self.params[8] is None or self.params[
-            8] == 'full' else dict(
-                zip(ZONE_KEYS, map(int, self.params[8].split(","))))
+        return ZONE_FULL if self.params[8] is None or self.params[8] == 'full' else dict(zip(ZONE_KEYS, map(int, self.params[8].split(","))))
 
     def size(self) -> ():
-        return SIZE_FULL if self.params[9] is None or self.params[
-            9] == 'full' else dict(
-                zip(SIZE_KEYS, map(int, self.params[9].split(","))))
+        return SIZE_FULL if self.params[9] is None or self.params[9] == 'full' else dict(zip(SIZE_KEYS, map(int, self.params[9].split(","))))
 
     def rotation(self) -> int:
         return int(self.params[10]) | 0
@@ -52,8 +48,7 @@ class GalacticaURL:
         return GalacticaURL(self.params[0:8] + ['info.json'])
 
     def set_zone(self, zone=ZONE_FULL):
-        szone = "full" if zone is None or zone == "full" or zone == ZONE_FULL else ",".join(
-            map(str, zone))
+        szone = "full" if zone is None or zone == "full" or zone == ZONE_FULL else ",".join(map(str, zone))
         parts = self.params[0:8] + [szone] + self.params[9:]
         return GalacticaURL(parts)
 
@@ -83,17 +78,10 @@ def zone_in_zone_as_pct(outer_zone_px, inner_zone_px) -> dict:
 
     w_pct = inner_zone_px['width'] / outer_zone_px['width']
     h_pct = inner_zone_px['height'] / outer_zone_px['height']
-    x_middle_pct = (inner_zone_px['x'] +
-                    inner_zone_px['width'] / 2) / outer_zone_px['width']
-    y_middle_pct = (inner_zone_px['y'] +
-                    inner_zone_px['height'] / 2) / outer_zone_px['height']
+    x_middle_pct = (inner_zone_px['x'] + inner_zone_px['width'] / 2) / outer_zone_px['width']
+    y_middle_pct = (inner_zone_px['y'] + inner_zone_px['height'] / 2) / outer_zone_px['height']
 
-    return {
-        'x': x_middle_pct,
-        'y': y_middle_pct,
-        'width': w_pct,
-        'height': h_pct
-    }
+    return {'x': x_middle_pct, 'y': y_middle_pct, 'width': w_pct, 'height': h_pct}
 
 
 def get_one_field_values(array_of_dict: list, fieldname: str) -> set:
