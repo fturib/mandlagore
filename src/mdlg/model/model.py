@@ -39,7 +39,8 @@ class GalacticaURL:
         return self.params[11].split(".")[1]
 
     def as_filename(self) -> str:
-        return "_".join((self.document_id(), str(self.page_number())))
+        # TDO - review if we want to encode subset/rotation/zoom in the file
+        return f"IMG-{self.document_id()}_P-{self.page_number()}.{self.file_format()}"
 
     def as_url(self) -> str:
         return "/".join(self.params)
