@@ -131,7 +131,7 @@ class SQLBuilder:
     @staticmethod
     def build_delete_query_with_parameters(tablename, fields) -> str:
         criteria = ((f, '=', None) for f in fields)
-        return SQLBuilder.build_delete_query("DELETE", tablename, SQLBuilder.build_where_clause(criteria))
+        return SQLBuilder.build_delete_query(tablename, SQLBuilder.build_where_clause(criteria))
 
     @staticmethod
     def build_get_query_with_parameters(tablename, fields) -> str:
