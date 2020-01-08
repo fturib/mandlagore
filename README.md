@@ -120,7 +120,7 @@ python3 mdcli.py labels
 
 ### download image content and image sizes from Galactica
 
-the API of Galactica, for collecting images on demand, is available on (IIIF's API for fetching images from Gallica)[http://api.bnf.fr/api-iiif-de-recuperation-des-images-de-gallica]
+the API of Galactica, for collecting images on demand, is available on [IIIF's API for fetching images from Gallica](http://api.bnf.fr/api-iiif-de-recuperation-des-images-de-gallica)
 Mandlagore keep metadata of the images in the BD, and their content in local files available at `${MDLG-DATA}/images/galactica`
 to download missing content and missing metadata (the size of images), cun cli:
 

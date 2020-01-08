@@ -1,7 +1,7 @@
 import requests
 from mdlg.model.model import GalacticaURL
 import json
-from requests import RequestException
+from requests import RequestException, Session
 from click import progressbar
 import os
 import io
@@ -9,6 +9,7 @@ import io
 
 class CannotRetriveInformation(Exception):
     pass
+
 
 def iter_slices(string, slice_length):
     """Iterate over slices of a string."""
@@ -19,12 +20,12 @@ def iter_slices(string, slice_length):
     while True:
         rd = arr.read(slice_length)
         yield rd
-        if len(rd) <=0:
+        if len(rd) <= 0:
             break
 
-class FakeDownloadResponse(object):
 
-    def __init__(self, content:str="ABCDEFGHIJKLMNOPQR", status = 200):
+class FakeDownloadResponse(object):
+    def __init__(self, content: str = "ABCDEFGHIJKLMNOPQR", status=200):
         super().__init__()
         self._content = content
         self._status = 200
@@ -35,7 +36,8 @@ class FakeDownloadResponse(object):
             raise RequestException(f"status returned is {self._status}")
 
     def iter_content(self, chunk_size=1):
-            return iter_slices(self._content, chunk_size)
+        return iter_slices(self._content, chunk_size)
+
 
 def clean_file(filename: str):
     if os.path.exists(filename):
@@ -45,9 +47,9 @@ def clean_file(filename: str):
             pass
 
 
-def download_binary_file(url:str, filename:str, titlebar:str=None, dryrun:bool=False):
+def download_binary_file(session: requests.Session, url: str, filename: str, titlebar: str = None, dryrun: bool = False):
     try:
-        r = FakeDownloadResponse() if dryrun else requests.get(url, stream=True)
+        r = FakeDownloadResponse() if dryrun else session.get(url, stream=True)
         r.raise_for_status()
         total_size = int(r.headers['content-length'])
         with progressbar(r.iter_content(1024), length=total_size, label=url if titlebar is None else titlebar) as bar:
@@ -63,9 +65,9 @@ def download_binary_file(url:str, filename:str, titlebar:str=None, dryrun:bool=F
         raise CannotRetriveInformation("saving url: %s in file %s - (exception raised is : %s)" % (url, filename, str(e)))
 
 
-def download_json(url: str) -> object:
+def download_json(session: requests.Session, url: str) -> object:
     try:
-        r = requests.get(url)
+        r = session.get(url)
         r.raise_for_status()
     except RequestException as re:
         raise CannotRetriveInformation("getting url : %s - return status code %d (exception raised is : %s)" % (url, r.status_code, str(re)))
@@ -73,21 +75,31 @@ def download_json(url: str) -> object:
     return r.json()
 
 
-class Galactica:
-    @staticmethod
-    def download_image(documentURL: str, filename: str, titlebar:str=None, dryrun:bool=False):
-        download_binary_file(documentURL, filename, titlebar, dryrun)
+class GalacticaSession(object):
+    def __init__(self):
+        super().__init__()
+        self._session = None
 
-    @staticmethod
-    def collect_image_size(documentURL: str, dryrun:bool=False) -> (int, int):
+    def __enter__(self):
+        self._session = requests.Session()
+        return self
+
+    def __exit__(self, *exc):
+        self._session = None
+
+
+    def download_image(self, documentURL: str, filename: str, titlebar: str = None, dryrun: bool = False):
+        download_binary_file(self._session, documentURL, filename, titlebar, dryrun)
+
+    def collect_image_size(self, documentURL: str, dryrun: bool = False) -> (int, int):
         if dryrun:
             return 10, 20
         else:
             url = GalacticaURL.from_url(documentURL).url_image_properties().as_url()
-            data = download_json(url)
+            data = download_json(self._session, url)
             if "width" not in data or "height" not in data:
                 raise CannotRetriveInformation("getting url : %s - request return is correct, but json data does not containe wiht/height : JSON = %s" %
-                                            (url, json.dumps(data)))
+                                               (url, json.dumps(data)))
             return data["width"], data["height"]
 
         # {"profile": "http://library.stanford.edu/iiif/image-api/1.1/compliance.html#level2",
@@ -100,4 +112,3 @@ class Galactica:
 
 class DRE:
     pass
-

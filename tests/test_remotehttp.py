@@ -1,9 +1,11 @@
 import unittest
-from mdlg.persistence.remoteHttp import Galactica, download_binary_file
+from mdlg.persistence.remoteHttp import download_binary_file, GalacticaSession
 from unittest.mock import patch
 import json
 import tempfile
 import os
+from requests import Session
+from mdlg.model.model import GalacticaURL
 
 
 class FakeRequest:
@@ -21,23 +23,36 @@ class FakeRequest:
 
 
 class TestRemoteHTTP(unittest.TestCase):
-    @patch('mdlg.persistence.remoteHttp.requests.get')
+    @patch('mdlg.persistence.remoteHttp.requests.Session.get')
     def test_collect_image_size(self, mock_requests):
         mock_requests.return_value = FakeRequest()
 
-        width, height = Galactica.collect_image_size("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/info.json")
+        with GalacticaSession() as g:
+            width, height = g.collect_image_size("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11/info.json")
         self.assertEqual(100, width)
         self.assertEqual(200, height)
 
     def test_download_file(self):
         FILENAME = "google_home.http"
         with tempfile.TemporaryDirectory() as tmpdir:
-            datafile = os.path.join(tmpdir, "data-gallica_12148_f11.json")
-            download_binary_file("http://www.google.com", FILENAME)
+            datafile = os.path.join(tmpdir, FILENAME)
+            with Session() as s:
+                download_binary_file(s, "http://www.google.com", datafile)
             
-            self.assertTrue(os.path.getsize(FILENAME) > 10, "dowmloaded file has length below 10 bytes")
-            s = open(FILENAME, 'rb').read()
+            self.assertTrue(os.path.getsize(datafile) > 10, "dowmloaded file has length below 10 bytes")
+            s = open(datafile, 'rb').read()
             self.assertTrue(s.find(bytes("html", "ascii")) > 0, "cannot retrieve the tag htmml in google's homepage")
 
+class TestGalacticaSession(unittest.TestCase):
+
+    @unittest.skip("we do not ant to download from BNF on each UT")
+    def test_download_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            datafile = os.path.join(tmpdir, "data-gallica_847020_f11.json")
+            gal = GalacticaURL.from_url("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11").set_zone('full').set_rotation(0).set_size(10).set_quality('native').set_file_format('jpg')        
+            with GalacticaSession() as g:
+                g.download_image(gal.as_url(), datafile)
+                w,h = g.collect_image_size(gal.as_url())
+            
 
 

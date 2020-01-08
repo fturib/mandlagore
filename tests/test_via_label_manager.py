@@ -126,7 +126,7 @@ class TestViaLabelManager(unittest.TestCase):
     def test_record_scenes(self):
         with unittest.mock.patch('mdlg.persistence.db.PersistMandlagore',
                                  autospec=True) as MockDB:
-            with unittest.mock.patch('mdlg.persistence.remoteHttp.Galactica',
+            with unittest.mock.patch('mdlg.persistence.remoteHttp.GalacticaSession',
                                      autospec=True) as MockGalactica:
                 with MockDB() as db:
                     db.retrieve_image.return_value = None
