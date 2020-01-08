@@ -117,3 +117,30 @@ then run the cli to import those label files in DB:
 ```bash
 python3 mdcli.py labels
 ```
+
+### download image content and image sizes from Galactica
+
+the API of Galactica, for collecting images on demand, is available on (IIIF's API for fetching images from Gallica)[http://api.bnf.fr/api-iiif-de-recuperation-des-images-de-gallica]
+Mandlagore keep metadata of the images in the BD, and their content in local files available at `${MDLG-DATA}/images/galactica`
+to download missing content and missing metadata (the size of images), cun cli:
+
+```bash
+python3 mdcli.py galactica
+```
+
+This command has several option to filter and limit the scope of images:
+
+* `-limit <max-images>` to limit total number of images to process
+* `-i <image-id>` to filter the images, * pattern is available, several id is possible if separated by comma
+* `-i <fieldname==value>` to filter on another metadata of images (documentUDL, width or height)
+* `-i localized` to filter on images that have already a size defined in DB
+* `-s <mandragore-id,image-id>` to filter the images on the connected scenes, * pattern is available, several id is possible if separated by comma
+* `-s <fieldname==value>` to filter on another metadata of scenes (mandragoreID, imageID, x, h, widht, height)
+* `-s localized` to filter on images that are connected to a scene that have already a position/size defined in DB
+* `-d <mandragore-id,class-id>` to filter the images on the connected scenes that includes a descriptor, * pattern is available, several id is possible if separated by comma
+* `-d <fieldname==value>` to filter on another metadata of descriptors (mandragoreID, classID, x, h, widht, height)
+* `-d localized` to filter on images that are connected to a scene that have a descriptor that has already a position/size defined in DB
+* `--dryrun` to simulate the operations: only the list of actions to operate (download content, download size) is printed. No actions taken
+* `--faked` to operate with fake download : content and size are generated in place of download - for tests purposes only
+
+NOTE: check the help of this command with : `python3 mdcli.py galactica --help`

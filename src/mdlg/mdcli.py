@@ -4,6 +4,7 @@ from mdlg.persistence.db import PersistMandlagore
 from mdlg.persistence.remoteHttp import Galactica
 from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
 from mdlg.services.via_label_manager import ViaLabelManager
+from mdlg.services.image_manager import ImagesManager
 
 # TODO to initialize the DB
 # 1- we consider the schema is ready
@@ -66,7 +67,7 @@ class MdlgEnv(object):
     }
     DB_FILENAME = 'mdlg.db'
 
-    def __init__(self, rootdir):
+    def __init__(self, rootdir:str):
         super().__init__()
         self._rootdir = rootdir
         for k in MdlgEnv.DIR_LOCATION:
@@ -88,6 +89,12 @@ class MdlgEnv(object):
 
     def via_annotation_dirname(self) -> str:
         return self._ensure_and_check_dir('import_labels')
+
+    def source_images_dirname(self) -> str:
+        return self._ensure_and_check_dir('images')
+
+    def source_images_galactica_dirname(self) -> str:
+        return self._ensure_and_check_dir('galactica')
 
     def __repr__(self):
         return '<MdlgEnv %r>' % self._rootdir
@@ -176,11 +183,53 @@ def labels(mdlgenv: MdlgEnv):
                 for w in warnings[:10]:
                     click.echo(" -- W -- %s" % w)
 
+def build_filter_from_option(param:str, value:str) -> list:
+    # value can be one : 'localized', <string-with-no-*>, <string-with-star>, , separated of strings with no *
+    # <fielname>==<value> or , separated values
+    fn = 'ID'
+    v = value
+    if v == 'localized':
+        fn = 'localized'
+        v = None
+    else:
+        parts = v.split('==')
+        if len(parts)>1:
+            fn = parts[0]
+            v = parts[1]
+        lval = v.split(',')
+        if len(lval)>1:
+            fn +=':list'
+            v = lval
+        else:
+            if v.find('*') >= 0:
+                fn += ':like'
+                v = v.replace("*", "%")
+    
+    return [param, fn, v]
+
+
 
 @mdcli.command()
-def galactica():
-    click.echo("Not yet implemented")
-
+@pass_env
+@click.option('-i', '--images', multiple=True, help="filtering on images\nformat is [field==](value|patttern|(val,)*)")
+@click.option('-s', '--scenes', multiple=True, help="filtering on scenes, with same format as above")
+@click.option('-d', '--descriptors', multiple=True, help="filtering on descriptors, with same format as above")
+@click.option('-l', '--limit', type=int, help="limit quantity images to process")
+@click.option('--dryrun', is_flag=True, help="download operations are avoided, only actions are printed")
+@click.option('--faked', is_flag=True, help="download is simulated")
+def galactica(mdlgenv: MdlgEnv, images, scenes, descriptors, limit, dryrun, faked):
+    # complete download informations from Galactica : images and size of images
+    # we should have filters:
+    # -all to download everything
+    # -scenes to complete only images involved in scenes that are located (have a defined position in the image)
+    # -size for size only
+    pathdb = mdlgenv.db_filename()
+    filter = [build_filter_from_option('images', f) for f in images]
+    filter += [build_filter_from_option('scenes', f) for f in scenes]
+    filter += [build_filter_from_option('descriptors', f) for f in descriptors]
+    with PersistMandlagore(pathdb) as db:
+        imgr = ImagesManager(mdlgenv.source_images_galactica_dirname(), db)
+        imgr.ensure_content_images(filter, limit, dryrun, faked)
 
 @mdcli.command()
 def dhsegment():

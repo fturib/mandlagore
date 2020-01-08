@@ -3,6 +3,7 @@ import os
 from mdlg.model.model import GalacticaURL, zone_in_zone_as_pct, ZONE_FULL
 import tempfile
 import click
+from mdlg.persistence.remoteHttp import CannotRetriveInformation
 
 # JSON_DATA_PATH = "/Users/francois/Documents/Mandragore/DetourageImages"
 
@@ -136,7 +137,12 @@ class ViaLabelManager:
                 # TODO - WARNING - we may have a side effect on location of scenes and descriptors if the initial image has been resized in VIA (eg pct:50)
                 if image is None or image['width'] is None or image['height'] is None:
                     # need to retrieve the size of the image
-                    w, h = self.galactica.collect_image_size(gal.as_url())
+                    w, h = None, None
+                    try:
+                        w, h = self.galactica.collect_image_size(gal.as_url())
+                    except CannotRetriveInformation as cri:
+                        # TODO - Manage exception
+                        pass
                     images_fields.append({'imageID': sc['imageID'], 'documentURL': gal.as_url(), 'width': w, 'height': h})
                 else:
                     w, h = image['width'], image['height']
