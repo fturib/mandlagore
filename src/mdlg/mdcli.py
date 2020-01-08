@@ -1,7 +1,7 @@
 import click
 import os
 from mdlg.persistence.db import PersistMandlagore
-from mdlg.persistence.remoteHttp import Galactica
+from mdlg.persistence.remoteHttp import GalacticaSession
 from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
 from mdlg.services.via_label_manager import ViaLabelManager
 from mdlg.services.image_manager import ImagesManager
@@ -169,9 +169,8 @@ def mandragore(mdlgenv: MdlgEnv):
 def labels(mdlgenv: MdlgEnv):
     # load labels frol all the VIA annotation files available in the import folder
     pathdb = mdlgenv.db_filename()
-    with PersistMandlagore(pathdb) as db:
+    with PersistMandlagore(pathdb) as db, GalacticaSession() as gal:
         dname = mdlgenv.via_annotation_dirname()
-        gal = Galactica
         vlm = ViaLabelManager(dname, db, gal)
         report = vlm.import_labels()
 
@@ -227,8 +226,8 @@ def galactica(mdlgenv: MdlgEnv, images, scenes, descriptors, limit, dryrun, fake
     filter = [build_filter_from_option('images', f) for f in images]
     filter += [build_filter_from_option('scenes', f) for f in scenes]
     filter += [build_filter_from_option('descriptors', f) for f in descriptors]
-    with PersistMandlagore(pathdb) as db:
-        imgr = ImagesManager(mdlgenv.source_images_galactica_dirname(), db)
+    with PersistMandlagore(pathdb) as db, GalacticaSession() as gal:
+        imgr = ImagesManager(mdlgenv.source_images_galactica_dirname(), db, gal)
         imgr.ensure_content_images(filter, limit, dryrun, faked)
 
 @mdcli.command()

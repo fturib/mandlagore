@@ -7,17 +7,18 @@
 # Engines will have to read the real size of the image from the file (it may have been downloaded with a reduction parameter)
 
 from mdlg.persistence.db import PersistMandlagore
-from mdlg.model.model import GalacticaURL
-from mdlg.persistence.remoteHttp import Galactica
+from mdlg.model.model import GalacticaURL, SIZE_FULL
+from mdlg.persistence.remoteHttp import GalacticaSession
 import os
 import click
 
 
 class ImagesManager:
-    def __init__(self, rootdir: str, db: PersistMandlagore):
+    def __init__(self, rootdir: str, db: PersistMandlagore, gal: GalacticaSession):
         super().__init__()
         self._rootdir = rootdir
         self._db = db
+        self._gal = gal
 
     def ensure_content_images(self, filter, limit:int=None, dryrun:bool=False, faked=False):
         # filter: an iteratable on imagesIDs
@@ -33,7 +34,7 @@ class ImagesManager:
             if w is None or h is None:
                 click.echo(f"download {downloading}/{count} - retriveing and updating size for image {gal.as_filename()}")
                 if not dryrun:
-                    nw, nh = Galactica.collect_image_size(gal.as_url(), faked)
+                    nw, nh = self._gal.collect_image_size(gal.as_url(), faked)
                     self._db.update_images([{'imageID':id, 'width':nw, 'height':nh}])
 
             if os.path.exists(filename):
@@ -45,7 +46,7 @@ class ImagesManager:
                 if dryrun:
                     click.echo(title)
                 else:
-                    Galactica.download_image(gal.as_url(), filename, title, faked)
+                    self._gal.download_image(gal.as_url(), filename, title, faked)
 
     def ensure_documenting_sizes_of_images(self):
         # download missing sizes from the remote web services

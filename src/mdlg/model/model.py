@@ -11,7 +11,9 @@ class GalacticaURL:
 
     @classmethod
     def from_url(cls, url):
-        return cls(url.split("/"))
+        parts = url.split("/")
+        parts += ([''] * (12 - len(parts)))
+        return cls(parts)
 
     def is_valid(self) -> bool:
         return len(self.params) > 5 and \
@@ -36,7 +38,8 @@ class GalacticaURL:
         return self.params[11].split(".")[0]
 
     def file_format(self) -> str:
-        return self.params[11].split(".")[1]
+        end = self.params[11].split(".")
+        return end[1] if len(end)>1 else ""
 
     def as_filename(self) -> str:
         # TDO - review if we want to encode subset/rotation/zoom in the file
