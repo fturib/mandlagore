@@ -38,21 +38,20 @@ class TestRemoteHTTP(unittest.TestCase):
             datafile = os.path.join(tmpdir, FILENAME)
             with Session() as s:
                 download_binary_file(s, "http://www.google.com", datafile)
-            
+
             self.assertTrue(os.path.getsize(datafile) > 10, "dowmloaded file has length below 10 bytes")
-            s = open(datafile, 'rb').read()
-            self.assertTrue(s.find(bytes("html", "ascii")) > 0, "cannot retrieve the tag htmml in google's homepage")
+            with open(datafile, 'rb') as d:
+                s = d.read()
+                self.assertTrue(s.find(bytes("html", "ascii")) > 0, "cannot retrieve the tag htmml in google's homepage")
+
 
 class TestGalacticaSession(unittest.TestCase):
-
     @unittest.skip("we do not ant to download from BNF on each UT")
     def test_download_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             datafile = os.path.join(tmpdir, "data-gallica_847020_f11.json")
-            gal = GalacticaURL.from_url("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11").set_zone('full').set_rotation(0).set_size(10).set_quality('native').set_file_format('jpg')        
+            gal = GalacticaURL.from_url("https://gallica.bnf.fr/iiif/ark:/12148/btv1b8470209d/f11").set_zone('full').set_rotation(0).set_size(10).set_quality(
+                'native').set_file_format('jpg')
             with GalacticaSession() as g:
                 g.download_image(gal.as_url(), datafile)
-                w,h = g.collect_image_size(gal.as_url())
-            
-
-
+                w, h = g.collect_image_size(gal.as_url())
