@@ -23,7 +23,8 @@ class TableDescription(object):
     def update_query_full_parameters(self, nameddata: [dict]) -> (str, [[]]):
         fields_to_update = list(nameddata[0].keys() - set(self.keys))
         paramnames = fields_to_update + self.keys
-        return SQLBuilder.build_update_query_with_parameters(self.name, self.keys, fields_to_update), [[d[n] if n in d else None for n in paramnames] for d in nameddata]
+        return SQLBuilder.build_update_query_with_parameters(self.name, self.keys,
+                                                             fields_to_update), [[d[n] if n in d else None for n in paramnames] for d in nameddata]
 
     def get_query_on_keys(self, key_values) -> (str, [[]]):
         return SQLBuilder.build_get_query_with_parameters(self.name, self.keys), [[d] for d in key_values] if len(self.keys) <= 1 else key_values
@@ -39,29 +40,26 @@ class TableDescription(object):
     def qualify(self, field) -> str:
         return "%s.%s" % (self.name, field)
 
-    
 
 TABLES_DESCRIPTIONS = [
     TableDescription('config', [], ['version'], []),
     TableDescription('classes', ['classID'], ['superclassID', 'label'], []),
     TableDescription('mandragores', ['mandragoreID'], ['description'], []),
     TableDescription('images', ['imageID'], ['documentURL', 'width', 'height'], []),
-    TableDescription('scenes', ['mandragoreID', 'imageID'], ['x', 'y', 'width', 'height'], [['mandragores', 'mandragoreID'],['images', 'imageID']]),
-    TableDescription('descriptors', ['mandragoreID', 'classID'], ['x', 'y', 'width', 'height'], [['mandragores', 'mandragoreID'],['classes', 'classID']]),
+    TableDescription('scenes', ['mandragoreID', 'imageID'], ['x', 'y', 'width', 'height'], [['mandragores', 'mandragoreID'], ['images', 'imageID']]),
+    TableDescription('descriptors', ['mandragoreID', 'classID'], ['x', 'y', 'width', 'height'], [['mandragores', 'mandragoreID'], ['classes', 'classID']]),
 ]
 
 TABLES = {t.name: t for t in TABLES_DESCRIPTIONS}
-
-
 
 GET_IMAGE = '''SELECT * FROM images where imageID = ?'''
 
 MASTER_QUERY = '''SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;'''
 
-
 IMAGES_OF_LOCALIZED_SCENES = "SELECT images.imageID from images JOIN scenes ON images.imageID = scenes.imageID WHERE scenes.width is not null LIMIT 10"
 
-def keep_unique_items(s:typing.Sequence)->list:
+
+def keep_unique_items(s: typing.Sequence) -> list:
     seen = set()
     return [x for x in s if x not in seen and not seen.add(x)]
 
@@ -69,32 +67,44 @@ def keep_unique_items(s:typing.Sequence)->list:
 class DBException(Exception):
     pass
 
+
 class SQLBuilder:
+    @staticmethod
+    def is_quoted(v):
+        return (v[0] == '"' and v[len(v) - 1] == '"') or (v[0] == "'" and v[len(v) - 1] == "'")
 
     @staticmethod
-    def build_where_clause(criterias:tuple) -> str:
-        def is_quoted(v):
-             return (v[0] == '"' and v[len(v)-1] =='"') or (v[0] == "'" and v[len(v)-1] == "'")
-        def quote(v):
-            if not isinstance(v, str) or (v is None) or (v =='?') or v.isnumeric() or (v == '') or is_quoted(v):
+    def quote(v):
+        if v is None:
+            return v
+
+        if isinstance(v, str):
+            if (v == '') or SQLBuilder.is_quoted(v):
                 return v
             return f"'{v}'"
 
-        def wrap_value(v):        
+        if isinstance(v, typing.Sequence):
+            return [SQLBuilder.quote(x) for x in v]
+
+        return v
+
+    @staticmethod
+    def build_where_clause(criterias: tuple) -> str:
+        def wrap_value(v):
             if not isinstance(v, str) and (isinstance(v, typing.Sequence)):
-                return "( " + ",".join([quote(vl) for vl in v]) +" )"
-            return quote(v)
-        
-        return " AND ".join( ["%s %s %s" % (k, op, '?' if v is None else wrap_value(v)) for k, op, v in criterias])
+                return "( " + ",".join([vl for vl in v]) + " )"
+            return v
+
+        return " AND ".join(["%s %s %s" % (k, op, '?' if v is None else wrap_value(v)) for k, op, v in criterias])
 
     @staticmethod
-    def build_set_clause(field_and_values:dict) -> str:
-        return ", ".join( [f"{f} = {'?' if v is None else v}" for f, v in field_and_values.items()])
+    def build_set_clause(field_and_values: dict) -> str:
+        return ", ".join([f"{f} = {'?' if v is None else v}" for f, v in field_and_values.items()])
 
     @staticmethod
-    def build_select_query(fields: str, tablename: str, criterias:str=None, limit:int=None) -> str:
+    def build_select_query(fields: str, tablename: str, criterias: str = None, limit: int = None) -> str:
         sql = f"SELECT {fields} FROM {tablename}"
-        if criterias is not None and len(criterias)>0:
+        if criterias is not None and len(criterias) > 0:
             sql += f" WHERE {criterias}"
         if limit is not None:
             sql += f" LIMIT {limit}"
@@ -102,15 +112,14 @@ class SQLBuilder:
 
     # UPDATE Customers SET ContactName = 'Alfred Schmidt', City= 'Frankfurt' WHERE CustomerID = 1;
     @staticmethod
-    def build_update_query(tablename: str, set_fields:str=None, criterias:str=None) -> str:
+    def build_update_query(tablename: str, set_fields: str = None, criterias: str = None) -> str:
         sql = f"UPDATE {tablename} SET {set_fields}"
-        if criterias is not None and len(criterias)>0:
+        if criterias is not None and len(criterias) > 0:
             sql += f" WHERE {criterias}"
         return sql
-    
 
     @staticmethod
-    def build_delete_query(tablename: str, criterias:str=None) -> str:
+    def build_delete_query(tablename: str, criterias: str = None) -> str:
         sql = f"DELETE FROM {tablename}"
         if criterias is not None:
             sql += f" WHERE {criterias}"
@@ -145,7 +154,7 @@ class SQLBuilder:
         return SQLBuilder.build_update_query(tablename, SQLBuilder.build_set_clause(fields_and_values), SQLBuilder.build_where_clause(criteria))
 
     @staticmethod
-    def find_path(from_table:str, to_table:str, tables_viewed:[], maxl = 1000) -> list:
+    def find_path(from_table: str, to_table: str, tables_viewed: [], maxl=1000) -> list:
         # just explore the tree of possible until find a path
         ft = TABLES[from_table]
         tt = TABLES[to_table]
@@ -160,7 +169,7 @@ class SQLBuilder:
             paths = []
             for t, f in ltb.links:
                 if not t in unmwanted:
-                    path, found = SQLBuilder.find_path(t, tb.name, unmwanted+[ltb.name], maxl-1)
+                    path, found = SQLBuilder.find_path(t, tb.name, unmwanted + [ltb.name], maxl - 1)
                     if found:
                         if append:
                             path += [(ltb.name, t, f)]
@@ -173,7 +182,7 @@ class SQLBuilder:
                 if d.name != ltb.name and not d.name in unmwanted:
                     for t, f in d.links:
                         if t == ltb.name:
-                            path, found = SQLBuilder.find_path(d.name, tb.name, unmwanted+[t], maxl-1)
+                            path, found = SQLBuilder.find_path(d.name, tb.name, unmwanted + [t], maxl - 1)
                             if found:
                                 if append:
                                     path += [(d.name, t, f)]
@@ -183,11 +192,10 @@ class SQLBuilder:
                                 maxl = min(maxl, len(path))
 
             # return the smallest path
-            if len(paths)>0:
+            if len(paths) > 0:
                 return min(paths), True
 
             return [], False
-
 
         path, found = find_direct_link(ft, tt)
         if found:
@@ -199,23 +207,23 @@ class SQLBuilder:
 
         if maxl > 1:
             paths = []
-            path, found = find_indirect_link(ft, tt, tables_viewed, False, maxl-1)
+            path, found = find_indirect_link(ft, tt, tables_viewed, False, maxl - 1)
             if found:
                 paths += [path]
                 maxl = min(maxl, len(path))
 
-            path, found = find_indirect_link(tt, ft, tables_viewed, True, maxl-1)
+            path, found = find_indirect_link(tt, ft, tables_viewed, True, maxl - 1)
             if found:
                 paths += [path]
 
             # return the smallest path
-            if len(paths)>0:
+            if len(paths) > 0:
                 return min(paths), True
 
         return [], False
 
     @staticmethod
-    def build_join(source_table:str, needed_tables:list):
+    def build_join(source_table: str, needed_tables: list):
         # return the "JOIN xx ON <fields> JOIN xx ON <fields> .. etc"
         # compute the right fields, based on the primary keys (simplified)
         # we need to compute any missing link between the tables
@@ -227,7 +235,7 @@ class SQLBuilder:
         missing.discard(source_table)
         query = source_table
 
-        if len(missing)==0:
+        if len(missing) == 0:
             return query
 
         # Need to compute the join with missing tables
@@ -236,7 +244,7 @@ class SQLBuilder:
             path, found = SQLBuilder.find_path(source_table, t, [])
             if not found:
                 raise DBException(f"cannot join the tables {source_table} and {t}")
-            
+
             # add to joined all unknwon paths
             links += [p for p in path if not p in links and not (p[1], p[0], p[2]) in links]
 
@@ -268,33 +276,31 @@ class SQLBuilder:
         operator = '='
         if fieldname == "ID":
             fields = td.keys
-            values = field_values
-            if len(fields)==1:
-                values = (values,)
+            values = SQLBuilder.quote(field_values)
+            if len(fields) == 1:
+                values = (values, )
         elif fieldname == "localized":
-            fields = ['width','height']
+            fields = ['width', 'height']
             values = ['not null'] * 2
             operator = 'is'
         else:
-            fields = (fieldname,)
-            values = (field_values,)
-        
-        if len(parts)>1:
+            fields = (fieldname, )
+            values = (SQLBuilder.quote(field_values), )
+
+        if len(parts) > 1:
             if parts[1] == "like":
                 operator = 'like'
             elif parts[1] == "list":
                 operator = 'in'
-        
-        return tuple(zip([td.qualify(f) for f in fields], [operator] * len(fields), values))
-        
 
+        return tuple(zip([td.qualify(f) for f in fields], [operator] * len(fields), values))
 
     @staticmethod
     def build_filtered_query(table, fields, filters, limit=None, qualify_fields=True):
         # Build a QUEY that retreive imagesIDs that match corresponding filters
         # filters : a triplet (table, field-like, value) where:
         #  - table is in one of the tables names
-        #  - field-like can be "ID" (for all fields) or field of table with "-like", "-list", in suffix, or "localized" 
+        #  - field-like can be "ID" (for all fields) or field of table with "-like", "-list", in suffix, or "localized"
         #  - value is either a direct value (string), a like value (string), or tuple of values (for -list)
         # all filters are AND-ed
         # limit, if defined, provide the number of elements to return
@@ -305,19 +311,18 @@ class SQLBuilder:
         criterias = []
         for (t, f, v) in filters:
             criterias.extend(SQLBuilder.build_field_criteria(t, f, v))
-        
+
         tables = SQLBuilder.build_join(table, [f[0] for f in filters])
         fieldclause = ""
         if qualify_fields:
-            fieldclause = ", ".join(tb.qualify(f) for f in fields) 
+            fieldclause = ", ".join(tb.qualify(f) for f in fields)
         else:
-            fieldclause = ", ".join(f for f in fields) 
+            fieldclause = ", ".join(f for f in fields)
         whereclause = SQLBuilder.build_where_clause(criterias)
 
         query = SQLBuilder.build_select_query(fieldclause, tables, whereclause, limit)
-        
+
         return query
-        
 
 
 class DBOperationHelper:
@@ -327,14 +332,6 @@ class DBOperationHelper:
 
     def __init__(self, conn):
         self.conn = conn
-
-    def delete_records(self, tablename, criterias: dict):
-        sql = SQLBuilder.build_delete_records_query(tablename, criterias)
-        self.conn.execute(sql)
-
-    def insert_into(self, tablename, fieldsAndValues: dict):
-        query = SQLBuilder.build_insert_into_query(tablename, fieldsAndValues)
-        self.conn.execute(query)
 
     def create_schema(self, schema_filename):
         # check the version of current schema
@@ -469,16 +466,16 @@ class PersistMandlagore(object):
         # Build a QUEY that retreive imagesIDs that match corresponding filters
         # filters : a triplet (table, field-like, value) where:
         #  - table is in 'images', 'scenes', 'descriptors'
-        #  - field-like can be "ID" or field of table with "-like", "-list", in suffix, or "localized" 
+        #  - field-like can be "ID" or field of table with "-like", "-list", in suffix, or "localized"
         #  - value is either a direct value (string), a like value (string), or tuple of values (for -list)
         #
         # limit, if defined, provide the number of elements to return
 
         # "SELECT images.imageID from images JOIN scenes ON images.imageID = scenes.imageID WHERE scenes.width is not null LIMIT 10"
 
-        td = TABLES['images']        
+        td = TABLES['images']
         query = SQLBuilder.build_filtered_query(td.name, fields, filters, limit)
-        queryCount = SQLBuilder.build_filtered_query(td.name, ("COUNT(*)",), filters, qualify_fields=False)
+        queryCount = SQLBuilder.build_filtered_query(td.name, ("COUNT(*)", ), filters, qualify_fields=False)
         total = self.conn.execute(queryCount).fetchone()[0]
         if limit is not None:
             total = min(total, limit)
