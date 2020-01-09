@@ -39,7 +39,7 @@ class GalacticaURL:
 
     def file_format(self) -> str:
         end = self.params[11].split(".")
-        return end[1] if len(end)>1 else ""
+        return end[1] if len(end) > 1 else ""
 
     def as_filename(self) -> str:
         # TDO - review if we want to encode subset/rotation/zoom in the file

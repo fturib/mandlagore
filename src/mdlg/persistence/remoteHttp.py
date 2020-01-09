@@ -87,7 +87,6 @@ class GalacticaSession(object):
     def __exit__(self, *exc):
         self._session = None
 
-
     def download_image(self, documentURL: str, filename: str, titlebar: str = None, dryrun: bool = False):
         download_binary_file(self._session, documentURL, filename, titlebar, dryrun)
 

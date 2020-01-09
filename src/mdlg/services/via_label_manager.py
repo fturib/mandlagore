@@ -147,7 +147,8 @@ class ViaLabelManager:
                 else:
                     w, h = image['width'], image['height']
 
-                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID'], 'width': w, 'height': h}
+                scene_info = {'mandragoreID': sc['mandragoreID'], 'imageID': sc['imageID']}
+                scene_info.update(sc['size'])
                 scene_fields.append(scene_info)
 
                 for d in sc['descriptors']:
