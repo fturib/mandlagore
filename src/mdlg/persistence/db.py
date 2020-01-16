@@ -168,7 +168,7 @@ class SQLBuilder:
         def find_indirect_link(ltb, tb, unmwanted, append, maxl):
             paths = []
             for t, f in ltb.links:
-                if not t in unmwanted:
+                if t not in unmwanted:
                     path, found = SQLBuilder.find_path(t, tb.name, unmwanted + [ltb.name], maxl - 1)
                     if found:
                         if append:
@@ -179,7 +179,7 @@ class SQLBuilder:
                         maxl = min(maxl, len(path))
 
             for d in TABLES.values():
-                if d.name != ltb.name and not d.name in unmwanted:
+                if d.name != ltb.name and d.name not in unmwanted:
                     for t, f in d.links:
                         if t == ltb.name:
                             path, found = SQLBuilder.find_path(d.name, tb.name, unmwanted + [t], maxl - 1)
@@ -246,7 +246,7 @@ class SQLBuilder:
                 raise DBException(f"cannot join the tables {source_table} and {t}")
 
             # add to joined all unknwon paths
-            links += [p for p in path if not p in links and not (p[1], p[0], p[2]) in links]
+            links += [p for p in path if p not in links and not (p[1], p[0], p[2]) in links]
 
         sql = " JOIN %s ON (%s)"
         joined = set([source_table])

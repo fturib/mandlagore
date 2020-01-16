@@ -67,7 +67,7 @@ class MdlgEnv(object):
     }
     DB_FILENAME = 'mdlg.db'
 
-    def __init__(self, rootdir:str):
+    def __init__(self, rootdir: str):
         super().__init__()
         self._rootdir = rootdir
         for k in MdlgEnv.DIR_LOCATION:
@@ -182,7 +182,8 @@ def labels(mdlgenv: MdlgEnv):
                 for w in warnings[:10]:
                     click.echo(" -- W -- %s" % w)
 
-def build_filter_from_option(param:str, value:str) -> list:
+
+def build_filter_from_option(param: str, value: str) -> list:
     # value can be one : 'localized', <string-with-no-*>, <string-with-star>, , separated of strings with no *
     # <fielname>==<value> or , separated values
     fn = 'ID'
@@ -192,20 +193,19 @@ def build_filter_from_option(param:str, value:str) -> list:
         v = None
     else:
         parts = v.split('==')
-        if len(parts)>1:
+        if len(parts) > 1:
             fn = parts[0]
             v = parts[1]
         lval = v.split(',')
-        if len(lval)>1:
-            fn +=':list'
+        if len(lval) > 1:
+            fn += ':list'
             v = lval
         else:
             if v.find('*') >= 0:
                 fn += ':like'
                 v = v.replace("*", "%")
-    
-    return [param, fn, v]
 
+    return [param, fn, v]
 
 
 @mdcli.command()
@@ -229,6 +229,7 @@ def galactica(mdlgenv: MdlgEnv, images, scenes, descriptors, limit, dryrun, fake
     with PersistMandlagore(pathdb) as db, GalacticaSession() as gal:
         imgr = ImagesManager(mdlgenv.source_images_galactica_dirname(), db, gal)
         imgr.ensure_content_images(filter, limit, dryrun, faked)
+
 
 @mdcli.command()
 def dhsegment():

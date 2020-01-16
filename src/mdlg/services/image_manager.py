@@ -20,22 +20,22 @@ class ImagesManager:
         self._db = db
         self._gal = gal
 
-    def ensure_content_images(self, filter, limit:int=None, dryrun:bool=False, faked=False):
+    def ensure_content_images(self, filter, limit: int = None, dryrun: bool = False, faked=False):
         # filter: an iteratable on imagesIDs
         # ensure that each image of the DB has its content downloaded
         ids_and_urls, count = self._db.retrieve_images(('imageID', 'documentURL', 'width', 'height'), filter, limit)
         downloading = 0
-        for id, url, w, h in ids_and_urls:                
+        for id, url, w, h in ids_and_urls:
             downloading += 1
             gal = GalacticaURL.from_url(url)
             gal = gal.set_size(20)
             filename = os.path.join(self._rootdir, gal.as_filename())
-            
+
             if w is None or h is None:
                 click.echo(f"download {downloading}/{count} - retriveing and updating size for image {gal.as_filename()}")
                 if not dryrun:
                     nw, nh = self._gal.collect_image_size(gal.as_url(), faked)
-                    self._db.update_images([{'imageID':id, 'width':nw, 'height':nh}])
+                    self._db.update_images([{'imageID': id, 'width': nw, 'height': nh}])
 
             if os.path.exists(filename):
                 # TODO should verify if the file is the right one
