@@ -1,6 +1,7 @@
 import unittest
 import tempfile
-from mdlg.persistence.db import PersistMandlagore, SQLBuilder, DBException
+from mdlg.persistence.db import PersistMandlagore, SQLBuilder, DBException, TABLES
+from contextlib import contextmanager
 
 
 class TestDB(unittest.TestCase):
@@ -47,10 +48,10 @@ class TestSQLHelper(unittest.TestCase):
 
         TESTS = {
             'double-join': [('images', 'descriptors', []),
-                            ([('scenes', 'images', 'imageID'), ('scenes', 'mandragores', 'mandragoreID'),
-                              ('descriptors', 'mandragores', 'mandragoreID')], True)],
+                            ([('images', 'scenes', 'imageID'), ('scenes', 'mandragores', 'mandragoreID'),
+                              ('mandragores', 'descriptors', 'mandragoreID')], True)],
             'empty-join': [('images', 'config', []), ([], False)],
-            'simple-join': [('images', 'scenes', []), ([('scenes', 'images', 'imageID')], True)],
+            'simple-join': [('images', 'scenes', []), ([('images', 'scenes', 'imageID')], True)],
             'double-join-limited': [('images', 'descriptors', ['scenes']), ([], False)],
         }
 
@@ -59,9 +60,9 @@ class TestSQLHelper(unittest.TestCase):
             paths, found = SQLBuilder.find_path(*params)
             exp_paths, exp_found = exp_results
             self.assertEqual(found, exp_found)
-            self.assertSetEqual(
-                set(paths),
-                set(exp_paths),
+            self.assertEqual(
+                paths,
+                exp_paths,
             )
 
     def test_build_filtered_query(self):
@@ -96,3 +97,46 @@ class TestSQLHelper(unittest.TestCase):
                     db.conn.execute(sql)
                 except Exception as e:
                     self.fail("%s - query %s failed : %s " % (k, sql, str(e)))
+
+@contextmanager
+def prepare_db(data: dict):
+    tmp = tempfile.NamedTemporaryFile(suffix='db', prefix='tmp-mdlg')
+    with PersistMandlagore(tmp.name) as db:
+        version = db.ensure_schema(rebuilt=True)
+        for n, lines in data.items():
+            q, p = TABLES[n].insert_or_update_query_full_parameters(lines)
+            db.conn.executemany(q, p)
+
+        db.conn.commit()
+
+        yield db
+
+
+class TestPersistMandlagore(unittest.TestCase):
+
+    def test_retrieve_image_and_scenes(self):
+        TEST = {
+            'image-no-scene':
+                ({'images': ({'imageID': 'img-one', 'width': 10, 'height': 10},)},
+                 {'img-one': (10, 0, 0)}),
+            'image-one-scene':
+                ({'images': ({'imageID': 'img-one', 'width': 10, 'height': 10},),
+                  'scenes': ({'imageID': 'img-one', 'x': 10, 'y': 10, 'width': 10, 'height': 10},)},
+                 {'img-one': (10, 1, 10)}),
+            'tho-image-one-scene-each':
+                ({'images': ({'imageID': 'img-one', 'width': 10, 'height': 10}, {'imageID': 'img-two', 'width': 20, 'height': 20}),
+                 'scenes': ({'imageID': 'img-one', 'x': 100, 'y': 100, 'width': 100, 'height': 100},
+                            {'imageID': 'img-two', 'x': 200, 'y': 200, 'width': 200, 'height': 200})},
+                 {'img-one': (10, 1, 100),
+                  'img-two': (20, 1, 200)}),
+        }
+
+        for k, (data, expect) in TEST.items():
+            with prepare_db(data) as db:
+                for n, (vimg, nb_scenes, vscenes) in expect.items():
+                    i = db.retrieve_image(n)
+                    scenes = list(db.retrieve_scenes_of_image(n))
+                    self.assertEqual(len(scenes), nb_scenes)
+                    self.assertEqual(i['width'], vimg)
+                    for s in scenes:
+                        self.assertEqual(s['x'], vscenes)

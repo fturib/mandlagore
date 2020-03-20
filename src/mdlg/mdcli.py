@@ -5,6 +5,7 @@ from mdlg.persistence.remoteHttp import GalacticaSession
 from mdlg.services.mandragore_dump_manager import MandragoreDumpManager
 from mdlg.services.via_label_manager import ViaLabelManager
 from mdlg.services.image_manager import ImagesManager
+from mdlg.services.ml_illumination_locations import MLIlluminationLocations
 
 # TODO to initialize the DB
 # 1- we consider the schema is ready
@@ -58,10 +59,8 @@ class MdlgEnv(object):
         'images': 'images',
         'galactica': 'images/galactica',
         'dre': 'images/dre',
-        'dhsegment_train': 'images/generated/dhsegment/train',
-        'dhsegment_predict': 'images/generated/dhsegment/predict',
-        'classify_train': 'images/generated/classify/train',
-        'classify_predict': 'images/generated/classify/predict',
+        'dhsegment': 'dhsegment',
+        'classify': 'classify',
         'import_dumps': 'import/mandragore-dumps',
         'import_labels': 'import/via-labels'
     }
@@ -95,6 +94,9 @@ class MdlgEnv(object):
 
     def source_images_galactica_dirname(self) -> str:
         return self._ensure_and_check_dir('galactica')
+
+    def dhsegment_dirname(self) -> str:
+        return self._ensure_and_check_dir('dhsegment')
 
     def __repr__(self):
         return '<MdlgEnv %r>' % self._rootdir
@@ -232,8 +234,36 @@ def galactica(mdlgenv: MdlgEnv, images, scenes, descriptors, limit, dryrun, fake
 
 
 @mdcli.command()
-def dhsegment():
-    click.echo("Not yet implemented")
+@pass_env
+@click.argument('action', type=click.Choice(['predict', 'train', 'eval'], case_sensitive=False))
+@click.option('-n', '--name', type=str, help="name of the dataset")
+@click.option('-m', '--model', type=str, help="name of the model to use for prediction or to generate for training")
+@click.option('-p', '--pre-model', type=str, help="name of the pre-model to use for prediction")
+@click.option('-i', '--images', multiple=True, help="filtering on images\nformat is [field==](value|patttern|(val,)*)")
+@click.option('-s', '--scenes', multiple=True, help="filtering on scenes, with same format as above")
+@click.option('-l', '--limit', type=int, help="limit quantity images to process")
+def dhsegment(
+    mdlgenv: MdlgEnv,
+    action,
+    nameset,
+    model,
+    pre_model,
+    images,
+    scenes,
+    descriptors,
+    limit,
+):
+    pathdb = mdlgenv.db_filename()
+    filter = [build_filter_from_option('images', f) for f in images]
+    filter += [build_filter_from_option('scenes', f) for f in scenes]
+    filter += [build_filter_from_option('descriptors', f) for f in descriptors]
+
+    src_images_dir = mdlgenv.source_images_galactica_dirname()
+    data_dir = mdlgenv.dhsegment_dirname()
+
+    with PersistMandlagore(pathdb) as db:
+        eng = MLIlluminationLocations(src_images_dir, data_dir, db)
+        _ = eng.execute(action, pre_model, model, nameset, filter, limit)
 
 
 @mdcli.command()
@@ -247,4 +277,4 @@ def classify():
 
 
 if __name__ == '__main__':
-    mdcli()
+    mdcli(None, None)

@@ -1,7 +1,8 @@
 import requests
 from mdlg.model.model import GalacticaURL
 import json
-from requests import RequestException, Session
+from requests import RequestException, Session, get
+from urllib.request import url2pathname
 from click import progressbar
 import os
 import io
@@ -22,6 +23,60 @@ def iter_slices(string, slice_length):
         yield rd
         if len(rd) <= 0:
             break
+
+
+# code provided here : https://stackoverflow.com/questions/10123929/fetch-a-file-from-a-local-url-with-python-requests
+class LocalFileAdapter(requests.adapters.BaseAdapter):
+    """Protocol Adapter to allow Requests to GET file:// URLs
+
+    @todo: Properly handle non-empty hostname portions.
+    """
+    @staticmethod
+    def _chkpath(method, path):
+        """Return an HTTP status for the given filesystem path."""
+        if method.lower() in ('put', 'delete'):
+            return 501, "Not Implemented"  # TODO
+        elif method.lower() not in ('get', 'head'):
+            return 405, "Method Not Allowed"
+        elif os.path.isdir(path):
+            return 400, "Path Not A File"
+        elif not os.path.isfile(path):
+            return 404, "File Not Found"
+        elif not os.access(path, os.R_OK):
+            return 403, "Access Denied"
+        else:
+            return 200, "OK"
+
+    def send(self, req, **kwargs):  # pylint: disable=unused-argument
+        """Return the file specified by the given request
+
+        @type req: C{PreparedRequest}
+        @todo: Should I bother filling `response.headers` and processing
+               If-Modified-Since and friends using `os.stat`?
+        """
+        path = os.path.normcase(os.path.normpath(url2pathname(req.path_url)))
+        response = requests.Response()
+
+        response.status_code, response.reason = self._chkpath(req.method, path)
+        if response.status_code == 200 and req.method.lower() != 'head':
+            try:
+                response.raw = open(path, 'rb')
+            except (OSError, IOError) as err:
+                response.status_code = 500
+                response.reason = str(err)
+
+        if isinstance(req.url, bytes):
+            response.url = req.url.decode('utf-8')
+        else:
+            response.url = req.url
+
+        response.request = req
+        response.connection = self
+
+        return response
+
+    def close(self):
+        pass
 
 
 class FakeDownloadResponse(object):
@@ -48,11 +103,19 @@ def clean_file(filename: str):
 
 
 def download_binary_file(session: requests.Session, url: str, filename: str, titlebar: str = None, dryrun: bool = False):
+
+    if dryrun:
+        r = FakeDownloadResponse()
+    else:
+        if session is None:
+            session = requests.session()
+        session.mount('file://', LocalFileAdapter())
+        r = session.get(url)
+
     try:
-        r = FakeDownloadResponse() if dryrun else session.get(url, stream=True)
         r.raise_for_status()
-        total_size = int(r.headers['content-length'])
-        with progressbar(r.iter_content(1024), length=total_size, label=url if titlebar is None else titlebar) as bar:
+        total_size = int(r.headers['content-length']) if 'content-length' in r.headers else -1
+        with progressbar(r.iter_content(1024), length=total_size if total_size >= 0 else None, label=url if titlebar is None else titlebar) as bar:
             with open(filename, 'wb') as fd:
                 for chunk in bar:
                     bar.update(fd.write(chunk))

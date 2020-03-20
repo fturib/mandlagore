@@ -1,7 +1,6 @@
 import unittest
 from mdlg.persistence.remoteHttp import download_binary_file, GalacticaSession
 from unittest.mock import patch
-import json
 import tempfile
 import os
 from requests import Session

@@ -29,6 +29,9 @@ class TableDescription(object):
     def get_query_on_keys(self, key_values) -> (str, [[]]):
         return SQLBuilder.build_get_query_with_parameters(self.name, self.keys), [[d] for d in key_values] if len(self.keys) <= 1 else key_values
 
+    def get_query_on_field(self, field_name, field_value) -> (str, [[]]):
+        return SQLBuilder.build_get_query_with_parameters(self.name, [field_name]), [[field_value]]
+
     def named_data(self, data) -> dict:
         if data is None:
             return None
@@ -39,6 +42,9 @@ class TableDescription(object):
 
     def qualify(self, field) -> str:
         return "%s.%s" % (self.name, field)
+
+    def qualified(self, fields) -> tuple:
+        return (self.qualify(f) for f in fields)
 
 
 TABLES_DESCRIPTIONS = [
@@ -165,16 +171,13 @@ class SQLBuilder:
                     return [(ltb.name, t, f)], True
             return [], False
 
-        def find_indirect_link(ltb, tb, unmwanted, append, maxl):
+        def find_indirect_link(ltb, tb, unmwanted, maxl):
             paths = []
             for t, f in ltb.links:
                 if t not in unmwanted:
                     path, found = SQLBuilder.find_path(t, tb.name, unmwanted + [ltb.name], maxl - 1)
                     if found:
-                        if append:
-                            path += [(ltb.name, t, f)]
-                        else:
-                            path = [(ltb.name, t, f)] + path
+                        path = [(ltb.name, t, f)] + path
                         paths += [path]
                         maxl = min(maxl, len(path))
 
@@ -184,10 +187,7 @@ class SQLBuilder:
                         if t == ltb.name:
                             path, found = SQLBuilder.find_path(d.name, tb.name, unmwanted + [t], maxl - 1)
                             if found:
-                                if append:
-                                    path += [(d.name, t, f)]
-                                else:
-                                    path = [(d.name, t, f)] + path
+                                path = [(t, d.name, f)] + path
                                 paths += [path]
                                 maxl = min(maxl, len(path))
 
@@ -197,24 +197,27 @@ class SQLBuilder:
 
             return [], False
 
+        def revert_path(path):
+            return [(td, ts, f) for (ts, td, f) in path[::-1]]
+
         path, found = find_direct_link(ft, tt)
         if found:
             return path, True
 
         path, found = find_direct_link(tt, ft)
         if found:
-            return path, True
+            return revert_path(path), True
 
         if maxl > 1:
             paths = []
-            path, found = find_indirect_link(ft, tt, tables_viewed, False, maxl - 1)
+            path, found = find_indirect_link(ft, tt, tables_viewed, maxl - 1)
             if found:
                 paths += [path]
                 maxl = min(maxl, len(path))
 
-            path, found = find_indirect_link(tt, ft, tables_viewed, True, maxl - 1)
+            path, found = find_indirect_link(tt, ft, tables_viewed, maxl - 1)
             if found:
-                paths += [path]
+                paths += [revert_path(path)]
 
             # return the smallest path
             if len(paths) > 0:
@@ -223,7 +226,7 @@ class SQLBuilder:
         return [], False
 
     @staticmethod
-    def build_join(source_table: str, needed_tables: list):
+    def build_join(source_table: str, needed_tables: list, all_of_source: bool = False):
         # return the "JOIN xx ON <fields> JOIN xx ON <fields> .. etc"
         # compute the right fields, based on the primary keys (simplified)
         # we need to compute any missing link between the tables
@@ -249,6 +252,7 @@ class SQLBuilder:
             links += [p for p in path if p not in links and not (p[1], p[0], p[2]) in links]
 
         sql = " JOIN %s ON (%s)"
+        sqlLeft = " LEFT" + sql
         joined = set([source_table])
         for (ts, td, f) in links:
             stb = TABLES[ts]
@@ -258,7 +262,7 @@ class SQLBuilder:
                 raise DBException(f"Invalid joined operation - tables {ts} and {td} are already joined")
             tadd = td if ts in joined else ts if td in joined else ts if ts in needed_tables else td if td in needed_tables else ts
             crit = SQLBuilder.build_where_clause([(stb.qualify(f), '=', dtb.qualify(f))])
-            query += sql % (tadd, crit)
+            query += (sqlLeft if all_of_source and ts == source_table else sql) % (tadd, crit)
             joined.add(tadd)
 
         # Verify we have all the tables expected and raise error if not
@@ -296,7 +300,7 @@ class SQLBuilder:
         return tuple(zip([td.qualify(f) for f in fields], [operator] * len(fields), values))
 
     @staticmethod
-    def build_filtered_query(table, fields, filters, limit=None, qualify_fields=True):
+    def build_filtered_query(table, fields, filters, limit=None, qualify_fields=True, all=True):
         # Build a QUEY that retreive imagesIDs that match corresponding filters
         # filters : a triplet (table, field-like, value) where:
         #  - table is in one of the tables names
@@ -310,12 +314,14 @@ class SQLBuilder:
 
         criterias = []
         for (t, f, v) in filters:
-            criterias.extend(SQLBuilder.build_field_criteria(t, f, v))
+            # if field is None - the filter is only for including a table in the JOIN
+            if f is not None:
+                criterias.extend(SQLBuilder.build_field_criteria(t, f, v))
 
-        tables = SQLBuilder.build_join(table, [f[0] for f in filters])
+        tables = SQLBuilder.build_join(table, [f[0] for f in filters], all)
         fieldclause = ""
         if qualify_fields:
-            fieldclause = ", ".join(tb.qualify(f) for f in fields)
+            fieldclause = ", ".join(tb.qualify(f) if f.find('.') < 0 else f for f in fields)
         else:
             fieldclause = ", ".join(f for f in fields)
         whereclause = SQLBuilder.build_where_clause(criterias)
@@ -387,6 +393,11 @@ class DBOperationHelper:
 
         self.conn.commit()
         return "%d lines imported" % lines, warnings
+
+
+def iterate_with_field_names(fields, iterDB):
+    for d in iterDB:
+        yield dict(zip(fields, d))
 
 
 class PersistMandlagore(object):
@@ -462,7 +473,7 @@ class PersistMandlagore(object):
         query, data = TABLES['images'].get_query_on_keys([imageID])
         return TABLES['images'].named_data(self.conn.execute(query, data[0]).fetchone())
 
-    def retrieve_images(self, fields, filters, limit=None):
+    def retrieve_images(self, fields, filters, limit=None, all=False, with_field_names=False):
         # Build a QUEY that retreive imagesIDs that match corresponding filters
         # filters : a triplet (table, field-like, value) where:
         #  - table is in 'images', 'scenes', 'descriptors'
@@ -470,16 +481,24 @@ class PersistMandlagore(object):
         #  - value is either a direct value (string), a like value (string), or tuple of values (for -list)
         #
         # limit, if defined, provide the number of elements to return
+        # all defined if ALL images that match criteria images will be selected, implying a LEFT join with other tables
 
         # "SELECT images.imageID from images JOIN scenes ON images.imageID = scenes.imageID WHERE scenes.width is not null LIMIT 10"
 
         td = TABLES['images']
-        query = SQLBuilder.build_filtered_query(td.name, fields, filters, limit)
+        query = SQLBuilder.build_filtered_query(td.name, fields, filters, limit, all)
         queryCount = SQLBuilder.build_filtered_query(td.name, ("COUNT(*)", ), filters, qualify_fields=False)
         total = self.conn.execute(queryCount).fetchone()[0]
         if limit is not None:
             total = min(total, limit)
-        return self.conn.execute(query), total
+        iter = self.conn.execute(query)
+        if with_field_names:
+            iter = iterate_with_field_names(fields, iter)
+        return iter, total
+
+    def retrieve_scenes_of_image(self, imageID):
+        query, data = TABLES['scenes'].get_query_on_field('imageID', imageID)
+        return map(TABLES['scenes'].named_data, self.conn.execute(query, data[0]).fetchall())
 
     def schema_version(self):
         if self.version is None:
